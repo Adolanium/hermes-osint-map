@@ -59,7 +59,7 @@ test('old events fade toward a floor but never disappear; ongoing layers never f
   const half = ageAlpha(quakes, now - quakes.fadeAfter / 2, now)
   assert.ok(half < 1 && half > 0.28)
   assert.equal(ageAlpha(quakes, now - quakes.fadeAfter * 10, now), 0.28)
-  assert.equal(ageAlpha(layerOf('natural'), now - 1e12, now), 1)
+  assert.equal(ageAlpha(layerOf('weather'), now - 1e12, now), 1)
 })
 
 test('toMarker sizes by severity and dims civil aircraft', () => {
