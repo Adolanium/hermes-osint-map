@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+desktop-src/node_modules/
+desktop-src/.impeccable/

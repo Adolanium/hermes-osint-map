@@ -1,0 +1,17 @@
+[
+ {
+  "product_id": "K04W",
+  "issue_datetime": "2026-10-22 20:21:43.920",
+  "message": "Space Weather Message Code: WARK04\r\nSerial Number: 5442\r\nIssue Time: 2026 Oct 22 2021 UTC\r\n\r\nEXTENDED WARNING: Geomagnetic K-index of 4 expected\nExtension to Serial Number: 5441\nValid From: 2026 Oct 21 1616 UTC\nNow Valid Until: 2026 Oct 23 0300 UTC\nWarning Condition: Persistence\n\r\n\r\nNOAA Space Weather Scale descriptions can be found at\r\nwww.swpc.noaa.gov/noaa-scales-explanation\r\n\r\nPotential Impacts: Area of impact primarily poleward of 65 degrees Geomagnetic Latitude.\r\nInduced Currents - Weak power grid fluctuations can occur.\r\nAurora - Aurora may be visible at high latitudes such as Canada and Alaska."
+ },
+ {
+  "product_id": "K04W",
+  "issue_datetime": "2026-10-22 16:48:36.817",
+  "message": "Space Weather Message Code: WARK04\r\nSerial Number: 5441\r\nIssue Time: 2026 Oct 22 1648 UTC\r\n\r\nEXTENDED WARNING: Geomagnetic K-index of 4 expected\nExtension to Serial Number: 5440\nValid From: 2026 Oct 21 1616 UTC\nNow Valid Until: 2026 Oct 22 2100 UTC\nWarning Condition: Persistence\n\r\n\r\nNOAA Space Weather Scale descriptions can be found at\r\nwww.swpc.noaa.gov/noaa-scales-explanation\r\n\r\nPotential Impacts: Area of impact primarily poleward of 65 degrees Geomagnetic Latitude.\r\nInduced Currents - Weak power grid fluctuations can occur.\r\nAurora - Aurora may be visible at high latitudes such as Canada and Alaska."
+ },
+ {
+  "product_id": "K04W",
+  "issue_datetime": "2026-10-22 14:24:34.303",
+  "message": "Space Weather Message Code: WARK04\r\nSerial Number: 5440\r\nIssue Time: 2026 Oct 22 1424 UTC\r\n\r\nEXTENDED WARNING: Geomagnetic K-index of 4 expected\nExtension to Serial Number: 5439\nValid From: 2026 Oct 21 1616 UTC\nNow Valid Until: 2026 Oct 22 1800 UTC\nWarning Condition: Persistence\n\r\n\r\nNOAA Space Weather Scale descriptions can be found at\r\nwww.swpc.noaa.gov/noaa-scales-explanation\r\n\r\nPotential Impacts: Area of impact primarily poleward of 65 degrees Geomagnetic Latitude.\r\nInduced Currents - Weak power grid fluctuations can occur.\r\nAurora - Aurora may be visible at high latitudes such as Canada and Alaska."
+ }
+]

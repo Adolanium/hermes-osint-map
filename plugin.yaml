@@ -1,0 +1,27 @@
+name: hermes-osint-map
+version: "0.1.0"
+description: "An OSINT situational-awareness page for Hermes Desktop: a live globe of earthquakes (USGS), natural events (NASA EONET), disaster alerts (GDACS), US severe weather (NWS), military and nearby aircraft (adsb.lol), satellites (CelesTrak), news incidents (GDELT) and maritime chokepoints, with headlines, space weather, markets, country facts and a passive recon toolkit (DNS, RDAP, TLS, headers, CT subdomains, CVE/KEV, IP, GitHub, MAC). Agent tools answer from the same public sources. No keys needed; an optional Twelve Data key adds equities and commodities."
+author: Adolanium
+license: MIT
+homepage: https://github.com/Adolanium/hermes-osint-map
+manifest_version: 1
+kind: standalone
+requires_hermes: ">=0.22.2"
+
+provides_tools:
+  - osint_situation
+  - osint_events
+  - osint_country
+  - osint_recon
+  - osint_news
+
+provides_hooks: []
+requires_env: []
+
+config_schema:
+  twelvedata_api_key:
+    type: secret
+    env: TWELVEDATA_API_KEY
+    label: "Twelve Data API key (optional)"
+    description: "Adds defense stocks, oil, gas, metals and the S&P 500 to the markets panel. Free keys at twelvedata.com; without one the panel shows crypto only."
+    required: false

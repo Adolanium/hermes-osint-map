@@ -1,0 +1,141 @@
+{
+ "type": "FeatureCollection",
+ "metadata": {
+  "generated": 1792731920000,
+  "url": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson",
+  "title": "USGS Magnitude 2.5+ Earthquakes, Past Day",
+  "status": 200,
+  "api": "2.8.2",
+  "count": 46
+ },
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "mag": 4.2,
+    "place": "184 km ENE of Nagqu, China",
+    "time": 1792724020661,
+    "updated": 1792726017040,
+    "tz": null,
+    "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000u49h",
+    "detail": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/detail/us6000u49h.geojson",
+    "felt": null,
+    "cdi": null,
+    "mmi": null,
+    "alert": null,
+    "status": "reviewed",
+    "tsunami": 0,
+    "sig": 271,
+    "net": "us",
+    "code": "6000u49h",
+    "ids": ",us6000u49h,",
+    "sources": ",us,",
+    "types": ",origin,phase-data,",
+    "nst": 42,
+    "dmin": 9.009,
+    "rms": 1.09,
+    "gap": 104,
+    "magType": "mb",
+    "type": "earthquake",
+    "title": "M 4.2 - 184 km ENE of Nagqu, China"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     93.7481,
+     32.3149,
+     10
+    ]
+   },
+   "id": "us6000u49h"
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "mag": 3.2,
+    "place": "44 km SW of Sand Point, Alaska",
+    "time": 1792723787870,
+    "updated": 1792724605040,
+    "tz": null,
+    "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000u49f",
+    "detail": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/detail/us6000u49f.geojson",
+    "felt": null,
+    "cdi": null,
+    "mmi": 2.482,
+    "alert": null,
+    "status": "reviewed",
+    "tsunami": 0,
+    "sig": 158,
+    "net": "us",
+    "code": "6000u49f",
+    "ids": ",us6000u49f,aka2026uzccvt,",
+    "sources": ",us,ak,",
+    "types": ",origin,phase-data,shakemap,",
+    "nst": 12,
+    "dmin": 0.788,
+    "rms": 0.49,
+    "gap": 211,
+    "magType": "ml",
+    "type": "earthquake",
+    "title": "M 3.2 - 44 km SW of Sand Point, Alaska"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -160.9015,
+     55.0132,
+     26.865
+    ]
+   },
+   "id": "us6000u49f"
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "mag": 4.5,
+    "place": "58 km SW of Atocha, Bolivia",
+    "time": 1792723541183,
+    "updated": 1792724348040,
+    "tz": null,
+    "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000u49c",
+    "detail": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/detail/us6000u49c.geojson",
+    "felt": null,
+    "cdi": null,
+    "mmi": null,
+    "alert": null,
+    "status": "reviewed",
+    "tsunami": 0,
+    "sig": 312,
+    "net": "us",
+    "code": "6000u49c",
+    "ids": ",us6000u49c,",
+    "sources": ",us,",
+    "types": ",origin,phase-data,",
+    "nst": 30,
+    "dmin": 2.179,
+    "rms": 0.93,
+    "gap": 104,
+    "magType": "mb",
+    "type": "earthquake",
+    "title": "M 4.5 - 58 km SW of Atocha, Bolivia"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -66.5795,
+     -21.3469,
+     235.829
+    ]
+   },
+   "id": "us6000u49c"
+  }
+ ],
+ "bbox": [
+  -175.4438,
+  -62.4088,
+  -2.25,
+  165.6239,
+  65.0219,
+  235.829
+ ]
+}

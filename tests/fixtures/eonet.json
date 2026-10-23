@@ -1,0 +1,118 @@
+{
+ "title": "EONET Events",
+ "events": [
+  {
+   "id": "EONET_25457",
+   "title": "Tropical Cyclone Agueda",
+   "description": null,
+   "link": "https://eonet.gsfc.nasa.gov/api/v3/events/EONET_25457",
+   "closed": null,
+   "categories": [
+    {
+     "id": "severeStorms",
+     "title": "Severe Storms"
+    }
+   ],
+   "sources": [
+    {
+     "id": "JTWC",
+     "url": "https://www.metoc.navy.mil/jtwc/products/sh0227.tcw"
+    }
+   ],
+   "geometry": [
+    {
+     "magnitudeValue": 50.0,
+     "magnitudeUnit": "kts",
+     "date": "2026-10-22T06:00:00Z",
+     "type": "Point",
+     "coordinates": [
+      50.8,
+      -6
+     ]
+    },
+    {
+     "magnitudeValue": 55.0,
+     "magnitudeUnit": "kts",
+     "date": "2026-10-22T12:00:00Z",
+     "type": "Point",
+     "coordinates": [
+      50.1,
+      -6.2
+     ]
+    },
+    {
+     "magnitudeValue": 50.0,
+     "magnitudeUnit": "kts",
+     "date": "2026-10-22T18:00:00Z",
+     "type": "Point",
+     "coordinates": [
+      49.7,
+      -6.7
+     ]
+    }
+   ]
+  },
+  {
+   "id": "EONET_25455",
+   "title": "Prescribed Fire STE - Goodin Ridge RX, McCreary, Kentucky",
+   "description": null,
+   "link": "https://eonet.gsfc.nasa.gov/api/v3/events/EONET_25455",
+   "closed": null,
+   "categories": [
+    {
+     "id": "wildfires",
+     "title": "Wildfires"
+    }
+   ],
+   "sources": [
+    {
+     "id": "IRWIN",
+     "url": "https://irwin.doi.gov/observer/incidents/2026-KYDBF-260285"
+    }
+   ],
+   "geometry": [
+    {
+     "magnitudeValue": 2604.0,
+     "magnitudeUnit": "acres",
+     "date": "2026-10-18T08:25:00Z",
+     "type": "Point",
+     "coordinates": [
+      -84.376511,
+      36.948746
+     ]
+    }
+   ]
+  },
+  {
+   "id": "EONET_20710",
+   "title": "Nevados del Chillan Volcano, Chile",
+   "description": null,
+   "link": "https://eonet.gsfc.nasa.gov/api/v3/events/EONET_20710",
+   "closed": null,
+   "categories": [
+    {
+     "id": "volcanoes",
+     "title": "Volcanoes"
+    }
+   ],
+   "sources": [
+    {
+     "id": "SIVolcano",
+     "url": "https://volcano.si.edu/volcano.cfm?vn=357070"
+    }
+   ],
+   "geometry": [
+    {
+     "magnitudeValue": null,
+     "magnitudeUnit": null,
+     "date": "2026-06-15T00:00:00Z",
+     "type": "Point",
+     "coordinates": [
+      -71.378,
+      -36.868
+     ]
+    }
+   ]
+  }
+ ]
+}

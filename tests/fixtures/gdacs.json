@@ -1,0 +1,240 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "bbox": [
+    -101.9,
+    10.5,
+    -101.9,
+    10.5
+   ],
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -101.9,
+     10.5
+    ]
+   },
+   "properties": {
+    "eventtype": "TC",
+    "eventid": 1001341,
+    "episodeid": 7,
+    "eventname": "VANCE-26",
+    "glide": "",
+    "name": "Tropical Cyclone VANCE-26",
+    "description": "Tropical Cyclone VANCE-26",
+    "htmldescription": "Green Tropical Cyclone VANCE-26 in México from: 21 Oct 2026  to: 23 Oct 2026 .",
+    "icon": "https://www.gdacs.org/images/gdacs_icons/maps/Green/TC.png",
+    "iconoverall": "https://www.gdacs.org/images/gdacs_icons/maps/Green/TC.png",
+    "url": {
+     "geometry": "https://www.gdacs.org/gdacsapi/api/polygons/getgeometry?eventtype=TC&eventid=1001341&episodeid=7",
+     "report": "https://www.gdacs.org/report.aspx?eventid=1001341&episodeid=7&eventtype=TC",
+     "details": "https://www.gdacs.org/gdacsapi/api/events/geteventdata?eventtype=TC&eventid=1001341"
+    },
+    "alertlevel": "Green",
+    "alertscore": 1,
+    "episodealertlevel": "Green",
+    "episodealertscore": 1.0,
+    "istemporary": "false",
+    "iscurrent": "true",
+    "country": "México",
+    "fromdate": "2026-10-21T15:00:00",
+    "todate": "2026-10-23T03:00:00",
+    "datemodified": "2026-10-23T02:41:05",
+    "iso3": "MEX",
+    "source": "NOAA",
+    "sourceid": "",
+    "polygonlabel": "Centroid",
+    "Class": "Point_Centroid",
+    "countryonland": "",
+    "affectedcountries": [],
+    "severitydata": {
+     "severity": 194.4432,
+     "severitytext": "Tropical Storm (maximum wind speed of 194 km/h)",
+     "severityunit": "km/h"
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "bbox": [
+    -66.5795,
+    -21.3469,
+    -66.5795,
+    -21.3469
+   ],
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -66.5795,
+     -21.3469
+    ]
+   },
+   "properties": {
+    "eventtype": "EQ",
+    "eventid": 1573288,
+    "episodeid": 1742003,
+    "eventname": "",
+    "glide": "",
+    "name": "Earthquake in Bolivia",
+    "description": "Earthquake in Bolivia",
+    "htmldescription": "Green M 4.5 Earthquake in Bolivia at: 23 Oct 2026 02:45:41.",
+    "icon": "https://www.gdacs.org/images/gdacs_icons/maps/Green/EQ.png",
+    "iconoverall": "https://www.gdacs.org/images/gdacs_icons/maps/Green/EQ.png",
+    "url": {
+     "geometry": "https://www.gdacs.org/gdacsapi/api/polygons/getgeometry?eventtype=EQ&eventid=1573288&episodeid=1742003",
+     "report": "https://www.gdacs.org/report.aspx?eventid=1573288&episodeid=1742003&eventtype=EQ",
+     "details": "https://www.gdacs.org/gdacsapi/api/events/geteventdata?eventtype=EQ&eventid=1573288"
+    },
+    "alertlevel": "Green",
+    "alertscore": 1,
+    "episodealertlevel": "Green",
+    "episodealertscore": 0.0,
+    "istemporary": "false",
+    "iscurrent": "true",
+    "country": "Bolivia",
+    "fromdate": "2026-10-23T02:45:41",
+    "todate": "2026-10-23T02:45:41",
+    "datemodified": "2026-10-23T03:25:42",
+    "iso3": "BOL",
+    "source": "NEIC",
+    "sourceid": "",
+    "polygonlabel": "Centroid",
+    "Class": "Point_Centroid",
+    "affectedcountries": [
+     {
+      "iso2": "BO",
+      "iso3": "BOL",
+      "countryname": "Bolivia"
+     }
+    ],
+    "severitydata": {
+     "severity": 4.5,
+     "severitytext": "Magnitude 4.5M, Depth:235.829km",
+     "severityunit": "M"
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "bbox": [
+    4.1147,
+    43.699,
+    4.1147,
+    43.699
+   ],
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     4.1147,
+     43.699
+    ]
+   },
+   "properties": {
+    "eventtype": "FL",
+    "eventid": 1104243,
+    "episodeid": 2,
+    "eventname": "",
+    "glide": "",
+    "name": "Flood in France",
+    "description": "Flood in France",
+    "htmldescription": "Green Flood in France from: 19 Oct 2026 01 to: 22 Oct 2026 01.",
+    "icon": "https://www.gdacs.org/images/gdacs_icons/maps/Green/FL.png",
+    "iconoverall": "https://www.gdacs.org/images/gdacs_icons/maps/Green/FL.png",
+    "url": {
+     "geometry": "https://www.gdacs.org/gdacsapi/api/polygons/getgeometry?eventtype=FL&eventid=1104243&episodeid=2",
+     "report": "https://www.gdacs.org/report.aspx?eventid=1104243&episodeid=2&eventtype=FL",
+     "details": "https://www.gdacs.org/gdacsapi/api/events/geteventdata?eventtype=FL&eventid=1104243"
+    },
+    "alertlevel": "Green",
+    "alertscore": 1,
+    "episodealertlevel": "Green",
+    "episodealertscore": 0.5,
+    "istemporary": "false",
+    "iscurrent": "true",
+    "country": "France",
+    "fromdate": "2026-10-19T01:00:00",
+    "todate": "2026-10-22T01:00:00",
+    "datemodified": "2026-10-21T09:54:52",
+    "iso3": "FRA",
+    "source": "GLOFAS",
+    "sourceid": "",
+    "polygonlabel": "Centroid",
+    "Class": "Point_Centroid",
+    "affectedcountries": [
+     {
+      "iso2": "FR",
+      "iso3": "FRA",
+      "countryname": "France"
+     }
+    ],
+    "severitydata": {
+     "severity": 0.0,
+     "severitytext": "Magnitude 0 ",
+     "severityunit": ""
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "bbox": [
+    33.7755,
+    -17.1056,
+    33.7755,
+    -17.1056
+   ],
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     33.7755,
+     -17.1056
+    ]
+   },
+   "properties": {
+    "eventtype": "WF",
+    "eventid": 1032833,
+    "episodeid": 9,
+    "eventname": "",
+    "glide": "",
+    "name": "Forest fires in Mozambique",
+    "description": "Forest fires in Mozambique",
+    "htmldescription": "Green Forest fires in Mozambique from: 07 Oct 2026 to: 22 Oct 2026.",
+    "icon": "https://www.gdacs.org/images/gdacs_icons/maps/Green/WF.png",
+    "iconoverall": "https://www.gdacs.org/images/gdacs_icons/maps/Green/WF.png",
+    "url": {
+     "geometry": "https://www.gdacs.org/gdacsapi/api/polygons/getgeometry?eventtype=WF&eventid=1032833&episodeid=9",
+     "report": "https://www.gdacs.org/report.aspx?eventid=1032833&episodeid=9&eventtype=WF",
+     "details": "https://www.gdacs.org/gdacsapi/api/events/geteventdata?eventtype=WF&eventid=1032833"
+    },
+    "alertlevel": "Green",
+    "alertscore": 1,
+    "episodealertlevel": "Green",
+    "episodealertscore": 0.5,
+    "istemporary": "false",
+    "iscurrent": "true",
+    "country": "Mozambique",
+    "fromdate": "2026-10-07T00:00:00",
+    "todate": "2026-10-22T00:00:00",
+    "datemodified": "2026-10-22T19:36:30",
+    "iso3": "MOZ",
+    "source": "GWIS",
+    "sourceid": "",
+    "polygonlabel": "Centroid",
+    "Class": "Point_Centroid",
+    "affectedcountries": [
+     {
+      "iso2": "MZ",
+      "iso3": "MOZ",
+      "countryname": "Mozambique"
+     }
+    ],
+    "severitydata": {
+     "severity": 12401.0,
+     "severitytext": "Green impact for forestfire in 12401 ha",
+     "severityunit": "ha"
+    }
+   }
+  }
+ ]
+}

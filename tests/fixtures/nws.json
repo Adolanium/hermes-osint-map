@@ -1,0 +1,413 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.712f6839c6d88e3c2f1d1735077424a67496a0b2.001.1",
+   "type": "Feature",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -108.61,
+       37.33
+      ],
+      [
+       -108.6,
+       37.31
+      ],
+      [
+       -108.61,
+       37.29
+      ],
+      [
+       -108.8,
+       37.3
+      ],
+      [
+       -109.04,
+       37.3
+      ],
+      [
+       -109.15,
+       37.21
+      ],
+      [
+       -109.2,
+       37.2
+      ],
+      [
+       -109.2,
+       37.23
+      ],
+      [
+       -109.11,
+       37.28
+      ],
+      [
+       -109.05,
+       37.34
+      ],
+      [
+       -108.88,
+       37.35
+      ],
+      [
+       -108.73,
+       37.35
+      ],
+      [
+       -108.61,
+       37.33
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.712f6839c6d88e3c2f1d1735077424a67496a0b2.001.1",
+    "@type": "wx:Alert",
+    "id": "urn:oid:2.49.0.1.840.0.712f6839c6d88e3c2f1d1735077424a67496a0b2.001.1",
+    "areaDesc": "Montezuma, CO; San Juan, UT",
+    "geocode": {
+     "SAME": [
+      "008083",
+      "049037"
+     ],
+     "UGC": [
+      "COC083",
+      "UTC037"
+     ]
+    },
+    "affectedZones": [
+     "https://api.weather.gov/zones/county/COC083",
+     "https://api.weather.gov/zones/county/UTC037"
+    ],
+    "references": [
+     {
+      "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.d1616bea532703e8b3755c48a98fe0adbdb19a4d.001.1",
+      "identifier": "urn:oid:2.49.0.1.840.0.d1616bea532703e8b3755c48a98fe0adbdb19a4d.001.1",
+      "sender": "w-nws.webmaster@noaa.gov",
+      "sent": "2026-10-22T20:38:00-06:00"
+     }
+    ],
+    "sent": "2026-10-22T22:35:00-06:00",
+    "effective": "2026-10-22T22:35:00-06:00",
+    "onset": "2026-10-22T22:35:00-06:00",
+    "expires": "2026-10-23T00:45:00-06:00",
+    "ends": "2026-10-23T00:45:00-06:00",
+    "status": "Actual",
+    "messageType": "Update",
+    "category": "Met",
+    "severity": "Severe",
+    "certainty": "Likely",
+    "urgency": "Expected",
+    "event": "Flood Warning",
+    "sender": "w-nws.webmaster@noaa.gov",
+    "senderName": "NWS Grand Junction CO",
+    "headline": "Flood Warning issued October 22 at 10:35PM MDT until October 23 at 12:45AM MDT by NWS Grand Junction CO",
+    "description": "* WHAT...Small stream flooding caused by excessive rainfall\ncontinues.\n\n* WHERE...West Central Montezuma County in southwestern Colorado...\nSoutheastern San Juan County in southeastern Utah...\n\n* WHEN",
+    "instruction": "Turn around, don't drown when encountering flooded roads. Most flood\ndeaths occur in vehicles.\n\nBe a",
+    "response": "Avoid",
+    "note": null,
+    "parameters": {
+     "AWIPSidentifier": [
+      "FLWGJT"
+     ],
+     "WMOidentifier": [
+      "WGUS45 KGJT 230435"
+     ],
+     "NWSheadline": [
+      "FLOOD WARNING NOW IN EFFECT UNTIL 1245 AM MDT FRIDAY"
+     ],
+     "BLOCKCHANNEL": [
+      "EAS",
+      "NWEM",
+      "CMAS"
+     ],
+     "EAS-ORG": [
+      "WXR"
+     ],
+     "VTEC": [
+      "/O.EXT.KGJT.FA.W.0011.000000T0000Z-261023T0645Z/"
+     ],
+     "eventEndingTime": [
+      "2026-10-23T00:45:00-06:00"
+     ],
+     "expiredReferences": [
+      "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.02c61e03619a412ed6bcae2f4fdba67cdcfd6846.001.1,2026-10-22T18:25:00-06:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.5fa17913f61c21d39cf1882ea9e028b8b1b317c7.001.1,2026-10-22T15:45:00-06:00"
+     ]
+    },
+    "scope": "Public",
+    "code": "IPAWSv1.0",
+    "language": "en-US",
+    "web": "http://www.weather.gov",
+    "eventCode": {
+     "SAME": [
+      "FLW"
+     ],
+     "NationalWeatherService": [
+      "FAW"
+     ]
+    }
+   }
+  },
+  {
+   "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.22e2b03d04db76d682769ab1501fd12b9cf152f2.001.1",
+   "type": "Feature",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -108.22,
+       34.31
+      ],
+      [
+       -107.89,
+       34.7
+      ],
+      [
+       -107.72,
+       34.59
+      ],
+      [
+       -107.72,
+       34.58
+      ],
+      [
+       -107.73,
+       34.48
+      ],
+      [
+       -107.73,
+       34.43
+      ],
+      [
+       -107.82,
+       34.3
+      ],
+      [
+       -107.92,
+       34.14
+      ],
+      [
+       -107.98,
+       33.99
+      ],
+      [
+       -108.12,
+       33.9
+      ],
+      [
+       -108.4,
+       33.89
+      ],
+      [
+       -108.35,
+       34.04
+      ],
+      [
+       -108.22,
+       34.31
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.22e2b03d04db76d682769ab1501fd12b9cf152f2.001.1",
+    "@type": "wx:Alert",
+    "id": "urn:oid:2.49.0.1.840.0.22e2b03d04db76d682769ab1501fd12b9cf152f2.001.1",
+    "areaDesc": "Catron, NM; Cibola, NM",
+    "geocode": {
+     "SAME": [
+      "035003",
+      "035006"
+     ],
+     "UGC": [
+      "NMC003",
+      "NMC006"
+     ]
+    },
+    "affectedZones": [
+     "https://api.weather.gov/zones/county/NMC003",
+     "https://api.weather.gov/zones/county/NMC006"
+    ],
+    "references": [
+     {
+      "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.68ebb5835d196b44ed826500f76e84144c1eefa7.001.1",
+      "identifier": "urn:oid:2.49.0.1.840.0.68ebb5835d196b44ed826500f76e84144c1eefa7.001.1",
+      "sender": "w-nws.webmaster@noaa.gov",
+      "sent": "2026-10-22T19:59:00-06:00"
+     }
+    ],
+    "sent": "2026-10-22T22:20:00-06:00",
+    "effective": "2026-10-22T22:20:00-06:00",
+    "onset": "2026-10-22T22:20:00-06:00",
+    "expires": "2026-10-23T00:00:00-06:00",
+    "ends": "2026-10-23T00:00:00-06:00",
+    "status": "Actual",
+    "messageType": "Update",
+    "category": "Met",
+    "severity": "Severe",
+    "certainty": "Likely",
+    "urgency": "Immediate",
+    "event": "Flash Flood Warning",
+    "sender": "w-nws.webmaster@noaa.gov",
+    "senderName": "NWS Albuquerque NM",
+    "headline": "Flash Flood Warning issued October 22 at 10:20PM MDT until October 23 at 12:00AM MDT by NWS Albuquerque NM",
+    "description": "At 1020 PM MDT, Doppler radar indicated thunderstorms producing heavy\nrain across the warned area. Between 1 and 2 inches of rain have\nfallen. Additional rainfall amounts up to 0.5 inches are possible",
+    "instruction": "Turn around, don't drown when encountering flooded roads. Most flood\ndeaths occur in vehicles.\n\nBe e",
+    "response": "Avoid",
+    "note": null,
+    "parameters": {
+     "AWIPSidentifier": [
+      "FFSABQ"
+     ],
+     "WMOidentifier": [
+      "WGUS75 KABQ 230420"
+     ],
+     "NWSheadline": [
+      "FLASH FLOOD WARNING REMAINS IN EFFECT UNTIL MIDNIGHT MDT TONIGHT FOR NORTHEASTERN CATRON AND SOUTHERN CIBOLA COUNTIES"
+     ],
+     "flashFloodDetection": [
+      "RADAR INDICATED"
+     ],
+     "BLOCKCHANNEL": [
+      "EAS",
+      "NWEM",
+      "CMAS"
+     ],
+     "EAS-ORG": [
+      "WXR"
+     ],
+     "VTEC": [
+      "/O.CON.KABQ.FF.W.0222.000000T0000Z-261023T0600Z/"
+     ],
+     "eventEndingTime": [
+      "2026-10-23T00:00:00-06:00"
+     ]
+    },
+    "scope": "Public",
+    "code": "IPAWSv1.0",
+    "language": "en-US",
+    "web": "http://www.weather.gov",
+    "eventCode": {
+     "SAME": [
+      "FFS"
+     ],
+     "NationalWeatherService": [
+      "FFW"
+     ]
+    }
+   }
+  },
+  {
+   "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.d3af5b7e451f0152f27180ac6422894ce091f499.001.1",
+   "type": "Feature",
+   "geometry": null,
+   "properties": {
+    "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.d3af5b7e451f0152f27180ac6422894ce091f499.001.1",
+    "@type": "wx:Alert",
+    "id": "urn:oid:2.49.0.1.840.0.d3af5b7e451f0152f27180ac6422894ce091f499.001.1",
+    "areaDesc": "Upper Gila River and Aravaipa Valleys including Clifton/Safford; White Mountains of Graham and Greenlee Counties including Hannagan Meadow; Galiuro and Pinaleno Mountains including Mount Graham",
+    "geocode": {
+     "SAME": [
+      "004009",
+      "004011",
+      "004003",
+      "004021"
+     ],
+     "UGC": [
+      "AZZ509",
+      "AZZ510",
+      "AZZ511"
+     ]
+    },
+    "affectedZones": [
+     "https://api.weather.gov/zones/forecast/AZZ509",
+     "https://api.weather.gov/zones/forecast/AZZ510",
+     "https://api.weather.gov/zones/forecast/AZZ511"
+    ],
+    "references": [
+     {
+      "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.58f9cf0990c4cf9da90391a0a8a7bbd699a1d180.001.1",
+      "identifier": "urn:oid:2.49.0.1.840.0.58f9cf0990c4cf9da90391a0a8a7bbd699a1d180.001.1",
+      "sender": "w-nws.webmaster@noaa.gov",
+      "sent": "2026-10-22T11:26:00-07:00"
+     },
+     {
+      "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.4c0d2a755a084dcf10095aadecf96ace63e1478b.002.1",
+      "identifier": "urn:oid:2.49.0.1.840.0.4c0d2a755a084dcf10095aadecf96ace63e1478b.002.1",
+      "sender": "w-nws.webmaster@noaa.gov",
+      "sent": "2026-10-22T16:52:00-07:00"
+     },
+     {
+      "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.92e7daa1e87fac3f784b59b7b48b92d611eba0c9.002.1",
+      "identifier": "urn:oid:2.49.0.1.840.0.92e7daa1e87fac3f784b59b7b48b92d611eba0c9.002.1",
+      "sender": "w-nws.webmaster@noaa.gov",
+      "sent": "2026-10-22T19:48:00-07:00"
+     }
+    ],
+    "sent": "2026-10-22T21:48:00-07:00",
+    "effective": "2026-10-22T21:48:00-07:00",
+    "onset": "2026-10-22T21:48:00-07:00",
+    "expires": "2026-10-22T23:00:00-07:00",
+    "ends": "2026-10-22T22:00:00-07:00",
+    "status": "Actual",
+    "messageType": "Update",
+    "category": "Met",
+    "severity": "Severe",
+    "certainty": "Possible",
+    "urgency": "Future",
+    "event": "Flood Watch",
+    "sender": "w-nws.webmaster@noaa.gov",
+    "senderName": "NWS Tucson AZ",
+    "headline": "Flood Watch issued October 22 at 9:48PM MST until October 22 at 10:00PM MST by NWS Tucson AZ",
+    "description": "The Flood Watch will expire for a portion of Southeast Arizona,\nincluding the following areas, Galiuro and Pinaleno Mountains, Upper\nGila River Valley and White Mountains of Graham and Greenlee\nCounti",
+    "instruction": "",
+    "response": "Prepare",
+    "note": null,
+    "parameters": {
+     "AWIPSidentifier": [
+      "FFATWC"
+     ],
+     "WMOidentifier": [
+      "WGUS65 KTWC 230448"
+     ],
+     "NWSheadline": [
+      "FLOOD WATCH WILL EXPIRE AT 10 PM MST THIS EVENING"
+     ],
+     "BLOCKCHANNEL": [
+      "EAS",
+      "NWEM",
+      "CMAS"
+     ],
+     "EAS-ORG": [
+      "WXR"
+     ],
+     "VTEC": [
+      "/O.EXP.KTWC.FA.A.0015.000000T0000Z-261023T0500Z/"
+     ],
+     "eventEndingTime": [
+      "2026-10-22T22:00:00-07:00"
+     ],
+     "expiredReferences": [
+      "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.fd14e538ff5e080047bafd2d863ba73261dcb3ba.001.1,2026-10-22T03:28:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.6fbeab7d1ad7b220949b8091e28660528720af5c.002.1,2026-10-21T11:09:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.2befa24596dc70e7ba25b591961e08e4fcb9d5ac.001.1,2026-10-21T06:45:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.b10ca345524bddd8a709ecec8e9474b9afddaa7c.001.1,2026-10-20T14:54:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.556d0c221c8330e8c73f2f6416edfeb78d7347a8.001.1,2026-10-20T01:30:00-07:00"
+     ]
+    },
+    "scope": "Public",
+    "code": "IPAWSv1.0",
+    "language": "en-US",
+    "web": "http://www.weather.gov",
+    "eventCode": {
+     "SAME": [
+      "FFA"
+     ],
+     "NationalWeatherService": [
+      "FAA"
+     ]
+    }
+   }
+  }
+ ]
+}

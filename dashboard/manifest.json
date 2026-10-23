@@ -1,0 +1,9 @@
+{
+  "name": "hermes-osint-map",
+  "label": "OSINT Map",
+  "version": "0.1.0",
+  "description": "Data routes for the Hermes OSINT Map Desktop page.",
+  "tab": { "hidden": true },
+  "entry": "index.js",
+  "api": "plugin_api.py"
+}

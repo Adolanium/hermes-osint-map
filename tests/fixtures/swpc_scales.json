@@ -1,0 +1,97 @@
+{
+ "0": {
+  "DateStamp": "2026-10-23",
+  "TimeStamp": "04:47:00",
+  "R": {
+   "Scale": "0",
+   "Text": "none",
+   "MinorProb": null,
+   "MajorProb": null
+  },
+  "S": {
+   "Scale": "0",
+   "Text": "none",
+   "Prob": null
+  },
+  "G": {
+   "Scale": "0",
+   "Text": "none"
+  }
+ },
+ "1": {
+  "DateStamp": "2026-10-23",
+  "TimeStamp": "04:47:00",
+  "R": {
+   "Scale": null,
+   "Text": null,
+   "MinorProb": "20",
+   "MajorProb": "5"
+  },
+  "S": {
+   "Scale": null,
+   "Text": null,
+   "Prob": "5"
+  },
+  "G": {
+   "Scale": "0",
+   "Text": "none"
+  }
+ },
+ "2": {
+  "DateStamp": "2026-10-24",
+  "TimeStamp": "00:00:00",
+  "R": {
+   "Scale": null,
+   "Text": null,
+   "MinorProb": "20",
+   "MajorProb": "5"
+  },
+  "S": {
+   "Scale": null,
+   "Text": null,
+   "Prob": "5"
+  },
+  "G": {
+   "Scale": "0",
+   "Text": "none"
+  }
+ },
+ "3": {
+  "DateStamp": "2026-10-25",
+  "TimeStamp": "00:00:00",
+  "R": {
+   "Scale": null,
+   "Text": null,
+   "MinorProb": "20",
+   "MajorProb": "5"
+  },
+  "S": {
+   "Scale": null,
+   "Text": null,
+   "Prob": "5"
+  },
+  "G": {
+   "Scale": "0",
+   "Text": "none"
+  }
+ },
+ "-1": {
+  "DateStamp": "2026-10-22",
+  "TimeStamp": "04:47:00",
+  "R": {
+   "Scale": "0",
+   "Text": "none",
+   "MinorProb": null,
+   "MajorProb": null
+  },
+  "S": {
+   "Scale": "0",
+   "Text": "none",
+   "Prob": null
+  },
+  "G": {
+   "Scale": "0",
+   "Text": "none"
+  }
+ }
+}

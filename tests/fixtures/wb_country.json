@@ -1,0 +1,38 @@
+[
+ {
+  "page": 1,
+  "pages": 1,
+  "per_page": "50",
+  "total": 1
+ },
+ [
+  {
+   "id": "JPN",
+   "iso2Code": "JP",
+   "name": "Japan",
+   "region": {
+    "id": "EAS",
+    "iso2code": "Z4",
+    "value": "East Asia & Pacific"
+   },
+   "adminregion": {
+    "id": "",
+    "iso2code": "",
+    "value": ""
+   },
+   "incomeLevel": {
+    "id": "HIC",
+    "iso2code": "XD",
+    "value": "High income"
+   },
+   "lendingType": {
+    "id": "LNX",
+    "iso2code": "XX",
+    "value": "Not classified"
+   },
+   "capitalCity": "Tokyo",
+   "longitude": "139.77",
+   "latitude": "35.67"
+  }
+ ]
+]
