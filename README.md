@@ -11,7 +11,7 @@
   Earthquakes, disaster alerts, natural events, severe weather, aircraft, satellites, news-derived incidents, traffic cameras and shipping chokepoints on a dithered 3D globe inside Hermes Desktop.
   Country dossiers, a passive recon toolkit, and briefings Hermes writes from the same public sources.
 
-  <sub>POWERED BY <a href="https://github.com/NousResearch/hermes-agent">HERMES AGENT</a> &nbsp;·&nbsp; COMMUNITY PLUGIN &nbsp;·&nbsp; VERSION 0.1.0</sub>
+  <sub>POWERED BY <a href="https://github.com/NousResearch/hermes-agent">HERMES AGENT</a> &nbsp;·&nbsp; COMMUNITY PLUGIN &nbsp;·&nbsp; VERSION 0.2.0</sub>
 
   <br /><br />
 
@@ -132,7 +132,7 @@ Hermes gateway  →  public data sources (fixed hosts, cached)  →  the globe, 
 
 | Hermes Agent | Python | Status |
 | --- | --- | --- |
-| 0.22.5 | 3.14 | Tested by hand in Hermes Desktop |
+| 0.22.5 | 3.14 | Tested by hand in Hermes Desktop (0.1.0) and in a browser preview of the page (0.2.0) |
 | 0.22.2 (minimum) | 3.11+ | SDK surface checked |
 
 The plugin depends only on `httpx` and `fastapi`, which Hermes already ships.

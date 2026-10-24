@@ -1,6 +1,6 @@
 {
   "name": "hermes-osint-map-desktop",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Source of desktop/plugin.js. `npm ci && npm run build` regenerates it.",

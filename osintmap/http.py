@@ -30,7 +30,7 @@ from urllib.parse import urljoin, urlsplit
 
 import httpx
 
-USER_AGENT = "hermes-osint-map/0.1 (+https://github.com/Adolanium/hermes-osint-map)"
+USER_AGENT = "hermes-osint-map/0.2 (+https://github.com/Adolanium/hermes-osint-map)"
 DEFAULT_TIMEOUT = 15.0
 MAX_BODY = 8 * 1024 * 1024
 

@@ -154,7 +154,7 @@ def test_get_json_sends_the_honest_user_agent(transport):
 
     transport["api.example.org/x"] = reply
     assert net.get_json("https://api.example.org/x", source="Example") == {"a": 1}
-    assert seen["ua"].startswith("hermes-osint-map/0.1 (+https://github.com/Adolanium/hermes-osint-map)")
+    assert seen["ua"].startswith("hermes-osint-map/0.2 (+https://github.com/Adolanium/hermes-osint-map)")
 
 
 @pytest.mark.parametrize("status,code,phrase", [(404, 404, "no record"), (429, 429, "rate limiting"),
