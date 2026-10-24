@@ -75,7 +75,7 @@ export function createGlobe(canvas, options) {
   const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true, premultipliedAlpha: true, powerPreference: 'high-performance' })
   renderer.setClearColor(0x000000, 0)
   const scene = new Scene()
-  const camera = new PerspectiveCamera(FOV, 1, 0.05, 50)
+  const camera = new PerspectiveCamera(FOV, 1, 0.005, 20) // near plane inside the closest zoom (0.035 above the surface)
   const size = new Vector2(1, 1)
   let pixelRatio = 1
 
@@ -256,7 +256,7 @@ export function createGlobe(canvas, options) {
     markerUniforms.uPixelRatio.value = pixelRatio
     wake()
   }
-  const minDist = () => 1.18
+  const minDist = () => 1.035 // close enough to separate individual cameras in a city
   const maxDist = () => fitDist * 1.45
 
   function globeRadiusPx() {

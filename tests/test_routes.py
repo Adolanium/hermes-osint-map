@@ -33,7 +33,7 @@ def get(client, path):
 
 def test_layers_route_is_cheap_and_ok(client):
     body = get(client, "/layers")
-    assert body["ok"] is True and len(body["layers"]) == 8
+    assert body["ok"] is True and len(body["layers"]) == 9
 
 
 def test_bad_input_is_ok_false_with_a_sentence(client):

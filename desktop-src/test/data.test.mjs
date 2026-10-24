@@ -95,3 +95,21 @@ test('bearing', () => {
   assert.equal(Math.round(bearing({ lat: 0, lon: 0 }, { lat: 0, lon: 1 })), 90)
   assert.equal(Math.round(bearing({ lat: 0, lon: 0 }, { lat: -1, lon: 0 })), 180)
 })
+
+test('cameras cluster per grid cell, keeping single members as they are', async () => {
+  const { clusterItems } = await import('../src/data/layers.js')
+  const cam = (id, lat, lon) => toItem({ id: `cameras:${id}`, lat, lon, title: id, subtitle: 'Transport for London · facing west' }, 'cameras')
+  const london = Array.from({ length: 50 }, (_, i) => cam(`tfl:${i}`, 51.4 + i * 0.004, -0.2 + i * 0.004))
+  const lone = cam('sg:1', 1.3, 103.8)
+  // Straddling the meridian, like London: still one group.
+  const greenwich = [cam('tfl:w', 51.5, -0.12), cam('tfl:e', 51.5, 0.05)]
+  assert.equal(clusterItems(greenwich).items.length, 1)
+  const { items, clusters } = clusterItems([...london, lone])
+  assert.equal(items.length, 2)
+  const group = items.find(i => i.cluster)
+  assert.equal(group.count, 50)
+  assert.ok(Math.abs(group.lat - 51.498) < 0.01)
+  assert.equal(clusters.get(group.id).label, '50 traffic cameras · Transport for London')
+  assert.equal(items.find(i => !i.cluster).id, 'cameras:sg:1')
+  assert.ok(toMarker(group, 0).size > toMarker(lone, 0).size)
+})

@@ -47,7 +47,7 @@ def test_combine_caps_by_severity():
 def test_registry_is_idle_before_any_fetch_and_lists_every_layer():
     rows = layers.registry()
     assert [r["id"] for r in rows] == ["quakes", "natural", "disasters", "weather", "aircraft", "satellites",
-                                       "incidents", "chokepoints"]
+                                       "incidents", "cameras", "chokepoints"]
     for row in rows:
         assert row["status"] == "idle" and row["count"] == 0 and row["needs_key"] is None
         assert {"label", "refresh_s", "source", "source_url", "attribution", "error", "updated"} <= set(row)

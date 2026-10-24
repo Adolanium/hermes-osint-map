@@ -1,6 +1,6 @@
 name: hermes-osint-map
 version: "0.1.0"
-description: "An OSINT situational-awareness page for Hermes Desktop: a live globe of earthquakes (USGS), natural events (NASA EONET), disaster alerts (GDACS), US severe weather (NWS), military and nearby aircraft (adsb.lol), satellites (CelesTrak), news incidents (GDELT) and maritime chokepoints, with headlines, space weather, markets, country facts and a passive recon toolkit (DNS, RDAP, TLS, headers, CT subdomains, CVE/KEV, IP, GitHub, MAC). Agent tools answer from the same public sources. No keys needed; an optional Twelve Data key adds equities and commodities."
+description: "An OSINT situational-awareness page for Hermes Desktop: a live globe of earthquakes (USGS), natural events (NASA EONET), disaster alerts (GDACS), US severe weather (NWS), military and nearby aircraft (adsb.lol), satellites (CelesTrak), news incidents (GDELT), official traffic cameras (TfL, Singapore LTA) and maritime chokepoints, with headlines, space weather, markets, country facts and a passive recon toolkit (DNS, RDAP, TLS, headers, CT subdomains, CVE/KEV, IP, GitHub, MAC). Agent tools answer from the same public sources. No keys needed; an optional Twelve Data key adds equities and commodities."
 author: Adolanium
 license: MIT
 homepage: https://github.com/Adolanium/hermes-osint-map

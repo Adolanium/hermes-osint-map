@@ -54,6 +54,9 @@ export function Shape({ layer, size = 11, title }) {
       path = <polygon points={pts} />
       break
     }
+    case 'frame':
+      path = <rect x="1.6" y="1.6" width={s - 3.2} height={s - 3.2} rx="1" fill="none" stroke={fill} strokeWidth="2" />
+      break
     case 'ring':
       path = <circle cx={c} cy={c} r={c - 1.6} fill="none" stroke={fill} strokeWidth="2" />
       break

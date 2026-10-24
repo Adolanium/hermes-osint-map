@@ -1,7 +1,7 @@
 // The map's layers as the page sees them: how each looks (shape + theme colour, so layers never
 // depend on colour alone), how fast it ages, and how a backend item becomes a globe marker.
 
-export const SHAPES = { circle: 0, diamond: 1, triangle: 2, square: 3, dart: 4, plus: 5, hexagon: 6, ring: 7 }
+export const SHAPES = { circle: 0, diamond: 1, triangle: 2, square: 3, dart: 4, plus: 5, hexagon: 6, ring: 7, frame: 8 }
 
 const H = 3600_000
 
@@ -24,6 +24,8 @@ export const LAYERS = [
     hint: 'adsb.lol: military aircraft worldwide, plus all traffic near the centre of the view when zoomed in' },
   { id: 'satellites', label: 'Satellites', shape: 'plus', cssVar: '--ui-purple', fallbackVar: '--ui-accent', fadeAfter: null, size: [5, 5],
     hint: 'CelesTrak orbital elements, positions computed live (SGP4)' },
+  { id: 'cameras', label: 'Traffic cameras', shape: 'frame', cssVar: '--ui-warm', fallbackVar: '--ui-text-secondary', fadeAfter: null, size: [3.5, 3.5],
+    hint: 'Official open-data traffic cameras: Transport for London and Singapore LTA. Click one for its latest still' },
   { id: 'chokepoints', label: 'Chokepoints', shape: 'ring', cssVar: '--ui-accent', fallbackVar: '--ui-text-primary', fadeAfter: null, size: [9, 9],
     hint: 'Strategic straits and canals for shipping' }
 ]
@@ -78,6 +80,54 @@ export function toItem(raw, layerId) {
   }
 }
 
+/** Camera distance below which cameras are drawn one by one instead of clustered. */
+export const CAMERA_DETAIL_DIST = 1.1
+
+/**
+ * Group dense point items (cameras) that lie within `radiusKm` of a group's first member, at the
+ * members' mean position. Distance-based rather than a grid, so a city on a grid line (London on
+ * the meridian) stays one group. A group with a single member keeps that member as it is.
+ * @returns {{ items: object[], clusters: Map<string, {lat: number, lon: number, count: number, label: string}> }}
+ */
+export function clusterItems(items, radiusKm = 150) {
+  const cells = []
+  const r = radiusKm / 111.2 // degrees of latitude
+  for (const item of items) {
+    if (item.lat === null || item.lon === null) continue
+    let cell = null
+    for (const c of cells) {
+      const dLat = item.lat - c.seedLat
+      const dLon = ((((item.lon - c.seedLon + 540) % 360) - 180) * Math.cos((c.seedLat * Math.PI) / 180))
+      if (dLat * dLat + dLon * dLon <= r * r) {
+        cell = c
+        break
+      }
+    }
+    if (!cell) cells.push((cell = { key: `${item.lat.toFixed(2)}:${item.lon.toFixed(2)}`, seedLat: item.lat, seedLon: item.lon, members: [], lat: 0, lon: 0 }))
+    cell.members.push(item)
+    cell.lat += item.lat
+    cell.lon += item.lon
+  }
+  const out = []
+  const clusters = new Map()
+  for (const { key, ...cell } of cells) {
+    if (cell.members.length === 1) {
+      out.push(cell.members[0])
+      continue
+    }
+    const first = cell.members[0]
+    const id = `${first.layer}:cluster:${key}`
+    const count = cell.members.length
+    const lat = cell.lat / count
+    const lon = cell.lon / count
+    const operator = first.subtitle?.split(' · ')[0] ?? layerOf(first.layer).label
+    const label = `${count} ${layerOf(first.layer).label.toLowerCase()}`
+    clusters.set(id, { lat, lon, count, label: `${label} · ${operator}` })
+    out.push({ ...first, id, lat, lon, title: label, subtitle: operator, severity: Math.min(1, 0.35 + Math.log10(count) / 3), count, cluster: true })
+  }
+  return { items: out, clusters }
+}
+
 /** Marker for the globe (null when the item has no position yet). */
 export function toMarker(item, now) {
   if (item.lat === null || item.lon === null) return null
@@ -87,6 +137,7 @@ export function toMarker(item, now) {
   let alpha = ageAlpha(layer, item.time, now)
   let size = lo + (hi - lo) * item.severity
   if (item.layer === 'satellites') alpha *= item.altKm > 2000 ? 0.45 : 0.8 // high orbits recede
+  if (item.cluster) size = 9 + 7 * item.severity // a group of cameras reads bigger than one
   if (item.layer === 'aircraft' && item.kind !== 'military') {
     alpha *= 0.62
     size *= 0.85

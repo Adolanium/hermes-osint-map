@@ -26,6 +26,7 @@ net = importlib.import_module(_NAME + ".osintmap.http")
 layers = importlib.import_module(_NAME + ".osintmap.layers")
 panels = importlib.import_module(_NAME + ".osintmap.panels")
 recon = importlib.import_module(_NAME + ".osintmap.recon")
+cameras = importlib.import_module(_NAME + ".osintmap.cameras")
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -71,6 +72,12 @@ def markets():
 @router.get("/country/{code}")
 def country(code: str):
     return _answer(lambda: panels.country(code))
+
+
+@router.get("/camera/{camera_id}")
+def camera_frame(camera_id: str):
+    """Latest still of a camera the cameras layer listed (by id only, never by URL)."""
+    return _answer(lambda: cameras.frame(camera_id))
 
 
 @router.get("/recon/{kind}")

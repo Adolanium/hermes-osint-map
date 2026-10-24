@@ -8,7 +8,7 @@
 
   **The world's live signals on one globe, and an agent that can brief you on them.**
 
-  Earthquakes, disaster alerts, natural events, severe weather, aircraft, satellites, news-derived incidents and shipping chokepoints on a dithered 3D globe inside Hermes Desktop.
+  Earthquakes, disaster alerts, natural events, severe weather, aircraft, satellites, news-derived incidents, traffic cameras and shipping chokepoints on a dithered 3D globe inside Hermes Desktop.
   Country dossiers, a passive recon toolkit, and briefings Hermes writes from the same public sources.
 
   <sub>POWERED BY <a href="https://github.com/NousResearch/hermes-agent">HERMES AGENT</a> &nbsp;·&nbsp; COMMUNITY PLUGIN &nbsp;·&nbsp; VERSION 0.1.0</sub>
@@ -43,11 +43,12 @@ Every source is public and needs no account. The page's "Brief me", "Ask Hermes"
 | News incidents | ⬢ hexagon | GDELT events, last 3 hours | 15 min |
 | Aircraft | ➤ dart | adsb.lol: military worldwide, all traffic near the view when zoomed in | 15 s |
 | Satellites | ✚ plus | CelesTrak elements, positions computed live (SGP4) | 1 s |
+| Traffic cameras | ▢ frame | Transport for London JamCams and Singapore LTA (data.gov.sg), official open data | stills every minute |
 | Chokepoints | ○ ring | Curated straits and canals | static |
 
 | | |
 | --- | --- |
-| **Follow what moves**<br />Click a satellite to draw its next orbit, or an aircraft to see the track it flew while you watched. | **Drill into a country**<br />A dossier with World Bank facts, everything on the map there, and recent headlines. |
+| **Follow what moves**<br />Click a satellite to draw its next orbit, an aircraft to see the track it flew while you watched, or a traffic camera for its latest still. | **Drill into a country**<br />A dossier with World Bank facts, everything on the map there, and recent headlines. |
 | **Read the room**<br />NOAA space weather, markets, a layer-health panel, and a feed of events, world headlines and alerts. | **Look things up**<br />DNS, RDAP/WHOIS, TLS certificates, security headers, CT subdomains, CVEs with CISA KEV status, IP, GitHub and MAC lookups. |
 
 | Satellite tracking | Country dossier |
@@ -76,6 +77,7 @@ Every source is public and needs no account. The page's "Brief me", "Ask Hermes"
 - A source that fails keeps serving its last good data, marked stale, and is left alone for a while before the next try.
 - adsb.lol requests are spaced out and retried once after a rate limit.
 - Headline search matches every word in any order.
+- Traffic cameras come only from official open-data feeds. They cluster into one marker per city until you zoom in, and a camera's still is fetched by its id from the operator's own image host, never from an address the page supplies.
 - Recon lookups that connect to a host refuse private, loopback, link-local and other internal addresses, before and after redirects.
 - News incidents are machine-coded from news coverage. The page and the tools say so; they show where reporting is, not verified events.
 - The page stops all polling and rendering when you leave it or the window is hidden. It respects reduced motion and works in split tiles.
@@ -98,7 +100,7 @@ The markets panel shows crypto out of the box. Add a free [Twelve Data](https://
 
 ### Keys
 
-`1`–`8` toggle layers, `/` opens recon, `R` resets the view, `A` toggles spin, `D` toggles dithering, arrows rotate, `+`/`-` zoom, `Esc` closes a panel.
+`1`–`9` toggle layers, `/` opens recon, `R` resets the view, `A` toggles spin, `D` toggles dithering, arrows rotate, `+`/`-` zoom, `Esc` closes a panel.
 
 ### Test
 
@@ -122,7 +124,7 @@ Hermes gateway  →  public data sources (fixed hosts, cached)  →  the globe, 
 ```
 
 - **What leaves your machine.** Requests to the public sources below, identified as `hermes-osint-map`. Recon lookups send the domain, IP, CVE, GitHub name or MAC prefix you enter to the matching public service. TLS and header lookups connect to the host you name.
-- **Who it talks to.** USGS, NASA EONET, GDACS, the National Weather Service, GDELT, adsb.lol, CelesTrak, NOAA SWPC, the World Bank, the BBC/Al Jazeera/DW/Guardian/France 24 RSS feeds, CoinGecko, and Twelve Data if you add a key. Recon uses Google Public DNS, rdap.org, crt.sh, CIRCL CVE, CISA KEV, ipwho.is, GitHub and MacVendors. Only the first three octets of a MAC address are sent.
+- **Who it talks to.** USGS, NASA EONET, GDACS, the National Weather Service, GDELT, adsb.lol, CelesTrak, NOAA SWPC, Transport for London (api.tfl.gov.uk and its JamCams image bucket), data.gov.sg (Singapore traffic images), the World Bank, the BBC/Al Jazeera/DW/Guardian/France 24 RSS feeds, CoinGecko, and Twelve Data if you add a key. Recon uses Google Public DNS, rdap.org, crt.sh, CIRCL CVE, CISA KEV, ipwho.is, GitHub and MacVendors. Only the first three octets of a MAC address are sent.
 - **Your key.** The optional Twelve Data key is sent to Twelve Data in a request header, never in a URL, and never logged or echoed in errors.
 - **Nothing else.** No files written, no shell commands, no background processes, no telemetry. The page remembers your layer choices in Hermes Desktop's plugin storage.
 
@@ -139,13 +141,14 @@ The plugin depends only on `httpx` and `fastapi`, which Hermes already ships.
 
 - Aircraft come from volunteer ADS-B receivers: coverage is thin over oceans and some regions, and military traffic only shows when it broadcasts.
 - Severe weather covers the United States only (NWS). Alerts without a mapped area are skipped.
+- Traffic cameras cover London and Singapore for now. Both publish stills, not live video, refreshed every minute or so.
 - GDELT incidents are machine-coded from news. Locations are often a city or country centroid, and labels like "Fight" describe the coverage, not a verified event.
 - crt.sh, behind subdomain lookups, is often slow or down. Those lookups then fail with a clear error.
 - Without a Twelve Data key, the markets panel shows crypto only.
 
 ## Data and credits
 
-Earthquakes: USGS (public domain). Natural events: NASA EONET (public domain). Disaster alerts: GDACS. Severe weather: National Weather Service (public domain). Incidents: The GDELT Project. Aircraft: adsb.lol (ODbL). Satellites: CelesTrak. Space weather: NOAA SWPC (public domain). Country facts: World Bank (CC BY 4.0). Headlines: links and titles from public RSS feeds. Borders: Natural Earth (public domain). Rendering: three.js (MIT); orbits: satellite.js (MIT).
+Earthquakes: USGS (public domain). Natural events: NASA EONET (public domain). Disaster alerts: GDACS. Severe weather: National Weather Service (public domain). Incidents: The GDELT Project. Aircraft: adsb.lol (ODbL). Satellites: CelesTrak. Traffic cameras: Powered by TfL Open Data (contains OS data © Crown copyright and database rights); Singapore traffic images from data.gov.sg under the Singapore Open Data Licence v1.0. Space weather: NOAA SWPC (public domain). Country facts: World Bank (CC BY 4.0). Headlines: links and titles from public RSS feeds. Borders: Natural Earth (public domain). Rendering: three.js (MIT); orbits: satellite.js (MIT).
 
 <br />
 

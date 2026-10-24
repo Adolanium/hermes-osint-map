@@ -338,6 +338,7 @@ export function ItemPanel({ item, controller, onClose, onCountry, onAsk, openExt
       </div>
       <div className="hom-detail-title">{item.title}</div>
       {item.subtitle ? <div className="hom-soft">{item.subtitle}</div> : null}
+      {item.layer === 'cameras' ? <CameraFrame rest={controller.rest} id={item.id} title={item.title} now={now} /> : null}
       <dl className="hom-facts">
         {item.time && item.layer !== 'satellites' ? (
           <>
@@ -382,6 +383,31 @@ export function ItemPanel({ item, controller, onClose, onCountry, onAsk, openExt
         ) : null}
       </div>
     </section>
+  )
+}
+
+/** A camera's latest still, refreshed every minute while shown. The backend fetches it by camera
+ *  id from the operator's image host and hands back a data URL, so the page loads nothing remote. */
+function CameraFrame({ rest, id, title, now }) {
+  const { data, error, loading } = useRemote(rest, `/camera/${encodeURIComponent(id)}`, 60_000)
+  const captured = data?.captured ?? null
+  return (
+    <figure className="hom-camera">
+      {data?.image ? (
+        <img className="hom-camera-img" src={data.image} alt={`Latest image from ${title}`} />
+      ) : loading ? (
+        <div className="hom-skeleton hom-camera-img" />
+      ) : (
+        <div className="hom-camera-img hom-camera-empty">{error ? `No image right now: ${error}` : 'No image'}</div>
+      )}
+      {data ? (
+        <figcaption className="hom-caption">
+          {captured ? `Captured ${age(captured, now)} ago · ` : ''}refreshes every minute
+          <br />
+          {data.attribution}
+        </figcaption>
+      ) : null}
+    </figure>
   )
 }
 

@@ -126,7 +126,7 @@ def situation(args: dict) -> str:
     lines = [f"OSINT situation at {_when(int(time.time() * 1000))}", ""]
     for layer_id, answer in answers.items():
         lines.append(_layer_status(layer_id, answer))
-        if layer_id in ("satellites", "chokepoints"):
+        if layer_id in ("satellites", "chokepoints", "cameras"):
             continue
         for entry in sorted(answer["items"], key=lambda i: i["severity"], reverse=True)[:3]:
             lines.append("  " + _item_line(entry))

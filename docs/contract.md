@@ -169,3 +169,21 @@ Recon `result` shapes (summary rows are the display contract; `result` is for de
 
 Other: `weather` item `url` is the NWS API URL of the alert (NWS has no HTML page per alert). `natural`
 items have `country: null` (EONET gives none). EONET is queried with `limit=1500`, GDACS for the last 7 days.
+
+## Traffic cameras (added after 0.1.0)
+
+Layer `cameras` (label "Traffic cameras", refresh 1 h): official open-data cameras only.
+
+| Source | List | Images | Licence |
+|---|---|---|---|
+| Transport for London JamCams | `api.tfl.gov.uk/Place/Type/JamCam` | `s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/` | Powered by TfL Open Data |
+| Singapore LTA traffic images | `api.data.gov.sg/v1/transport/traffic-images` | `images.data.gov.sg/` | Singapore Open Data Licence v1.0 |
+
+Item ids: `cameras:tfl:{id}`, `cameras:sg:{id}`; kind `traffic`; no `time` for TfL. Image URLs are not sent to the page.
+
+`GET /camera/{id}` → `{"ok": true, "id", "image": "data:image/jpeg;base64,…", "captured": ms | null, "fetched": ms, "attribution"}`.
+Only ids the layer has listed are served (404 otherwise); the image URL must be https on one of the two hosts
+and path prefixes above; the body is capped at 1.5 MB and must be a JPEG, PNG or WebP by signature
+(data.gov.sg labels its JPEGs `application/octet-stream`). Frames are cached for 60 s.
+
+The page clusters cameras within 150 km into one marker until the camera is closer than 1.1 globe radii.

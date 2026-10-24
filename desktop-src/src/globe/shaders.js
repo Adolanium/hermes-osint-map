@@ -267,6 +267,7 @@ float shapeNorm(vec2 p, int s) {
     vec2 q = abs(p);
     return max(q.x * 0.866 + q.y * 0.5, q.y) * 1.12;
   }
+  if (s == 8) return max(abs(p.x), abs(p.y)) * 1.15;                                // 8: frame (hollow square)
   return length(p);                                                                 // 7: ring (drawn hollow)
 }
 
@@ -278,7 +279,7 @@ void main() {
   float aa = fwidth(n) * 1.1;
   vec3 color = uColors[int(vColor + 0.5)];
   float fill = 1.0 - smoothstep(1.0 - aa, 1.0 + aa, n);
-  if (s == 7) fill *= smoothstep(0.62 - aa, 0.62 + aa, n);            // hollow ring
+  if (s == 7 || s == 8) fill *= smoothstep(0.62 - aa, 0.62 + aa, n);  // hollow ring / frame
   float edge = (1.0 - smoothstep(0.0, aa * 1.6, abs(n - 1.0))) * 0.9;  // crisp outline
   float glow = exp(-max(n - 1.0, 0.0) * 2.4) * (1.0 - fill) * mix(0.18, 0.4, uDark);
   // "Just arrived": an expanding ring for the first 2.4 s.

@@ -9,7 +9,7 @@ const TICK_MS = 1000
 const REGISTRY_MS = 30_000
 const TRAIL_POINTS = 24
 const TRAIL_AIRCRAFT = 800
-const DEFAULT_REFRESH_S = { quakes: 60, disasters: 600, natural: 600, weather: 300, incidents: 900, aircraft: 15, satellites: 21600, chokepoints: 86400 }
+const DEFAULT_REFRESH_S = { quakes: 60, disasters: 600, natural: 600, weather: 300, incidents: 900, aircraft: 15, satellites: 21600, cameras: 3600, chokepoints: 86400 }
 
 const DEFAULTS = {
   layers: Object.fromEntries(LAYERS.map(l => [l.id, l.id !== 'weather'])),

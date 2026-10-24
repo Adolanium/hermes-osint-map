@@ -348,6 +348,9 @@ ${LAYER_VARS}
 .hom-error { padding: 8px 10px; border-radius: 8px; font-size: 11.5px; color: var(--ui-text-primary); background: color-mix(in oklab, var(--ui-red) 14%, transparent); }
 .hom-listening-inline { display: flex; align-items: center; gap: 8px; color: var(--ui-text-secondary); font-size: 11.5px; }
 .hom-facts dd { user-select: text; }
+.hom-camera { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.hom-camera-img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; border: 1px solid var(--hom-line); background: color-mix(in oklab, var(--ui-text-primary) 5%, transparent); }
+.hom-camera-empty { display: grid; place-items: center; padding: 12px; text-align: center; font-size: 11px; color: var(--ui-text-tertiary); }
 
 @keyframes hom-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .hom-rise { animation: hom-rise .6s var(--hom-ease) both; }

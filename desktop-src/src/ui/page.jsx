@@ -1,7 +1,7 @@
 // The OSINT Map page: a full-bleed globe with glass overlays.
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Codicon, createBudgetedLoop, GlyphSpinner, haptic, Tip, useTheme, useValue } from '@hermes/plugin-sdk'
-import { LAYERS, layerOf, toMarker } from '../data/layers.js'
+import { CAMERA_DETAIL_DIST, clusterItems, LAYERS, layerOf, toMarker } from '../data/layers.js'
 import { orbitPath } from '../data/satellites.js'
 import { countryAt, countryByCode, countryByIndex, countryName } from '../geo/world.js'
 import { createGlobe } from '../globe/globe.js'
@@ -10,7 +10,7 @@ import { usePrefersReducedMotion, useThrottled } from './kit.jsx'
 import { CountryPanel, FeedCard, ItemPanel, LayersCard, MarketsCard, ReconDrawer, SpaceWeatherCard } from './panels.jsx'
 import { CSS } from './styles.js'
 
-const QUIET_LAYERS = new Set(['aircraft', 'satellites', 'chokepoints'])
+const QUIET_LAYERS = new Set(['aircraft', 'satellites', 'chokepoints', 'cameras'])
 const HEAT_LAYERS = new Set(['incidents', 'disasters', 'quakes'])
 
 export function OsintPage({ controller, rest, ask, openExternal }) {
@@ -230,6 +230,9 @@ function GlobeView({ controller, globeRef, onPick, onContextLost, selectedItem, 
   onLostRef.current = onContextLost
   const seenLayers = useRef(new Set())
   const [calloutText, setCalloutText] = useState(null)
+  // Cameras cluster until you zoom in close; clusters are not items, so they live here.
+  const [cameraDetail, setCameraDetail] = useState(false)
+  const clustersRef = useRef(new Map())
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -239,9 +242,14 @@ function GlobeView({ controller, globeRef, onPick, onContextLost, selectedItem, 
     try {
       globe = createGlobe(canvas, {
         loop: (fn, opts) => createBudgetedLoop(fn, opts),
-        onPick: target => onPickRef.current(target),
+        onPick: target => {
+          const cluster = target.kind === 'marker' ? clustersRef.current.get(target.id) : null
+          if (cluster) globeRef.current?.flyTo(cluster.lat, cluster.lon, 1.035)
+          else onPickRef.current(target)
+        },
         onContextLost: () => onLostRef.current?.(),
         onView: v => {
+          setCameraDetail(v.dist < CAMERA_DETAIL_DIST)
           const now = performance.now()
           if (now - lastView > 250) {
             lastView = now
@@ -319,8 +327,14 @@ function GlobeView({ controller, globeRef, onPick, onContextLost, selectedItem, 
     const markers = []
     const quiet = new Set()
     const heat = new Float32Array(256)
+    let clusters = new Map()
     for (const layer of LAYERS) {
-      const list = controller.layerItems(layer.id)
+      let list = controller.layerItems(layer.id)
+      if (layer.id === 'cameras' && !cameraDetail) {
+        const grouped = clusterItems(list)
+        list = grouped.items
+        clusters = grouped.clusters
+      }
       const firstSight = list.length > 0 && !seenLayers.current.has(layer.id)
       if (list.length) seenLayers.current.add(layer.id)
       for (const item of list) {
@@ -336,6 +350,7 @@ function GlobeView({ controller, globeRef, onPick, onContextLost, selectedItem, 
     }
     // Moving objects last, so the static events under them stay clickable underneath.
     markers.sort((a, b) => (QUIET_LAYERS.has(LAYERS[a.layer].id) ? 1 : 0) - (QUIET_LAYERS.has(LAYERS[b.layer].id) ? 1 : 0))
+    clustersRef.current = clusters
     globe.setMarkers(markers, { quietIds: quiet })
     let max = 0
     for (let i = 0; i < 256; i++) max = Math.max(max, heat[i])
@@ -346,7 +361,7 @@ function GlobeView({ controller, globeRef, onPick, onContextLost, selectedItem, 
         heat[i] = r < 0.25 ? 0 : 0.18 + 0.55 * Math.sqrt((r - 0.25) / 0.75)
       }
     globe.setHeat(heat)
-  }, [version, controller, globeRef])
+  }, [version, controller, globeRef, cameraDetail])
 
   // Selection → highlight, camera, track line and callout.
   const selectedId = selectedItem?.id ?? null
@@ -388,7 +403,8 @@ function GlobeView({ controller, globeRef, onPick, onContextLost, selectedItem, 
     } else globe.setPath([])
   }, [version, selectedId, controller, globeRef])
 
-  const hoverItem = hover?.kind === 'marker' ? controller.item(hover.id) : null
+  const hoverCluster = hover?.kind === 'marker' ? clustersRef.current.get(hover.id) : null
+  const hoverItem = hover?.kind === 'marker' && !hoverCluster ? controller.item(hover.id) : null
   const hoverCountry = hover?.kind === 'country' ? countryByIndex(hover.index) : null
 
   return (
@@ -403,8 +419,15 @@ function GlobeView({ controller, globeRef, onPick, onContextLost, selectedItem, 
           </>
         ) : null}
       </div>
-      <div ref={tipRef} className="hom-tip hom-panel" style={{ opacity: hoverItem || hoverCountry ? 1 : 0 }} aria-hidden="true">
-        {hoverItem ? (
+      <div ref={tipRef} className="hom-tip hom-panel" style={{ opacity: hoverItem || hoverCountry || hoverCluster ? 1 : 0 }} aria-hidden="true">
+        {hoverCluster ? (
+          <>
+            <span className="hom-tip-title">{hoverCluster.label}</span>
+            <span className="hom-muted" style={{ fontSize: 10.5 }}>
+              Click to zoom in
+            </span>
+          </>
+        ) : hoverItem ? (
           <>
             <span className="hom-tip-title">{hoverItem.title}</span>
             <span className="hom-muted">

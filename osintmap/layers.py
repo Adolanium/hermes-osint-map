@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Callable
 
-from . import chokepoints, gdelt, http, parsers
+from . import cameras, chokepoints, gdelt, http, parsers
 from .http import SnapshotCache, UpstreamError
 
 USGS_DAY = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson"
@@ -200,6 +200,11 @@ LAYERS: dict[str, Layer] = {layer.id: layer for layer in (
     Layer("incidents", "News incidents", "GDELT", "https://www.gdeltproject.org",
           "The GDELT Project (cite GDELT when reusing)", 900,
           lambda p: [Part("incidents", 900, "GDELT", lambda: _items(_window.refresh()), _cache)]),
+    Layer("cameras", "Traffic cameras", "TfL, data.gov.sg", "https://api-portal.tfl.gov.uk",
+          "Powered by TfL Open Data; Singapore traffic images from data.gov.sg (Singapore Open Data Licence)", 3600,
+          lambda p: [Part("cameras:tfl", 3600, "TfL", cameras.loader(cameras.TFL, cameras.parse_tfl, "TfL"), _cache),
+                     Part("cameras:sg", 3600, "data.gov.sg",
+                          cameras.loader(cameras.SINGAPORE, cameras.parse_singapore, "data.gov.sg"), _cache)]),
     Layer("chokepoints", "Chokepoints", "Curated", "https://en.wikipedia.org/wiki/Choke_point",
           "Curated by this plugin from public geography", 0,
           lambda p: [Part("chokepoints", 10 ** 9, "the built-in list", lambda: _items(chokepoints.items()), _cache)]),
