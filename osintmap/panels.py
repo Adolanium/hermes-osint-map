@@ -326,14 +326,12 @@ def parse_twelvedata(raw: Any) -> tuple[list[dict], list[str]]:
 
 
 def twelvedata_key() -> str | None:
-    """The optional Twelve Data key, read the way Hermes resolves plugin secrets."""
+    """The optional Twelve Data key, read only through Hermes's secret scope (so each profile keeps
+    its own key). Outside Hermes, or with no scope in this process, it behaves as if unset."""
     try:
         from agent.secret_scope import get_secret
         value = get_secret(TWELVEDATA_ENV)
-    except ImportError:
-        import os
-        value = os.environ.get(TWELVEDATA_ENV)
-    except Exception:  # no profile scope in this process: behave as if unset
+    except Exception:
         value = None
     return value.strip() if isinstance(value, str) and value.strip() else None
 
