@@ -85,7 +85,9 @@ def _item_line(entry: dict) -> str:
     if entry.get("time"):
         bits.append(f"at {_when(entry['time'])}")
     if entry.get("lat") is not None:
-        bits.append(f"{entry['lat']:.2f},{entry['lon']:.2f}")
+        note = " (country-level accuracy)" if any(
+            len(p) > 1 and p[0] == "Place precision" for p in entry.get("props", [])) else ""
+        bits.append(f"{entry['lat']:.2f},{entry['lon']:.2f}{note}")
     if entry.get("url"):
         bits.append(entry["url"])
     return "- " + " ".join(bits)
