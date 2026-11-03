@@ -142,7 +142,7 @@ The plugin depends only on `httpx` and `fastapi`, which Hermes already ships.
 - Aircraft come from volunteer ADS-B receivers: coverage is thin over oceans and some regions, and military traffic only shows when it broadcasts.
 - Severe weather covers the United States only (NWS). Alerts without a mapped area are skipped.
 - Traffic cameras cover London and Singapore for now. Both publish stills, not live video, refreshed every minute or so.
-- GDELT incidents are machine-coded from news. Locations are often a city or country centroid, and labels like "Fight" describe the coverage, not a verified event. Titles repeat the article's own headline when its URL slug is readable, and the place name when it is not.
+- GDELT incidents are machine-coded from news. Locations are often a city or country centroid, and labels like "Fight" describe the coverage, not a verified event. Titles echo the article's own headline when its URL slug is readable, and the place name when it is not.
 - crt.sh, behind subdomain lookups, is often slow or down. Those lookups then fail with a clear error.
 - Without a Twelve Data key, the markets panel shows crypto only.
 
