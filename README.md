@@ -134,7 +134,7 @@ Hermes gateway  →  public data sources (fixed hosts, cached)  →  the globe, 
 
 | Hermes Agent | Python | Status |
 | --- | --- | --- |
-| 0.22.5 | 3.14 | Tested by hand in Hermes Desktop (0.1.0) and in a browser preview of the page (0.2.0) |
+| 0.22.5 | 3.14 | Tested by hand in Hermes Desktop (0.1.0, 0.3.0) and in a browser preview of the page (0.2.0) |
 | 0.22.2 (minimum) | 3.11+ | SDK surface checked |
 
 The plugin depends only on `httpx` and `fastapi`, which Hermes already ships.
