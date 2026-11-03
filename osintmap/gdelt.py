@@ -9,8 +9,8 @@ coordinate cell is one item, the most severe coding survives and the dropped lab
 "Also coded".
 
 Each export is downloaded once: a refresh only fetches stamps that entered the window, and stamps
-that left it are dropped, so memory stays bounded by the window. GDELT's doc/search API is rate
-limited and not used.
+that left it are dropped, so memory stays bounded by the window. GDELT's doc/search API is rate limited
+and is used only by the news panel's queried headline search.
 """
 
 from __future__ import annotations

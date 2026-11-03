@@ -69,6 +69,8 @@ Every source is public and needs no account. The page's "Brief me", "Ask Hermes"
 | `osint_recon` | any recon lookup |
 | `osint_news` | headline search |
 
+When a query is given, `osint_news` also calls the GDELT 2.0 article-search API (`api.gdeltproject.org/api/v2/doc/doc`, no key, 10-minute cache) so local and specialist stories appear, not just the five world services.
+
 ## Small decisions, already made
 
 - Layers never depend on colour alone: each has its own shape, and every colour comes from your Hermes theme.
