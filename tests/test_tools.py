@@ -109,3 +109,15 @@ def test_schemas_are_well_formed():
     for name, schema in tools.SCHEMAS.items():
         assert schema["name"] == name and schema["parameters"]["type"] == "object"
         assert set(schema["parameters"]["required"]) <= set(schema["parameters"]["properties"])
+
+
+def test_incident_line_flags_country_only_coordinates():
+    entry = {"title": "Threaten · Buses vandalized with swastikas", "lat": 39.83, "lon": -98.58,
+             "props": [["Type", "Threaten"], ["Place precision", "Country only"]]}
+    assert "39.83,-98.58 (country-level accuracy)" in tools._item_line(entry)
+
+
+def test_incident_line_without_precision_prop_reads_plain():
+    entry = {"title": "Fight · Kharkiv, Ukraine", "lat": 49.99, "lon": 36.23, "props": [["Type", "Fight"]]}
+    line = tools._item_line(entry)
+    assert "49.99,36.23" in line and "country-level" not in line

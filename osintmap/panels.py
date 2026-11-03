@@ -12,6 +12,7 @@ import hashlib
 import re
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from typing import Any
 
@@ -33,6 +34,47 @@ FEEDS = (
 NEWS_TTL = 600
 MAX_PER_FEED = 100
 MAX_SUMMARY = 300
+
+GDELT_DOC = "https://api.gdeltproject.org/api/v2/doc/doc"
+DOC_MAX = 50
+DOC_TIMESPAN = "1d"  # tool promises "recent headlines"; raise to 7d if sparse queries annoy
+
+
+def _doc_time(value: object) -> int | None:
+    """GDELT seendate (20261102T221500Z) → epoch ms."""
+    try:
+        return int(datetime.strptime(str(value), "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc).timestamp() * 1000)
+    except (TypeError, ValueError):
+        return None
+
+
+def _doc_items(payload: object) -> list[dict]:
+    """GDELT DOC 2.0 ArtList JSON → headline dicts shaped exactly like parse_feed's output."""
+    out = []
+    for art in (payload or {}).get("articles", []) if isinstance(payload, dict) else []:
+        title = text(strip_tags(str(art.get("title") or "")), 200)
+        url = str(art.get("url") or "").strip()
+        if not title or not url.startswith(("http://", "https://")):
+            continue
+        out.append({"id": "news:" + hashlib.sha1(url.encode()).hexdigest()[:12],
+                    "title": title, "url": url[:500], "source": "GDELT",
+                    "time": _doc_time(art.get("seendate")), "summary": None})
+        if len(out) >= DOC_MAX:
+            break
+    return out
+
+
+def _doc_query(q: str) -> str:
+    """GDELT wants every word quoted for an all-words match (matches search_headlines' AND semantics)."""
+    return " ".join(f'"{word}"' for word in re.findall(r"[\w'-]+", q)[:6])
+
+
+def _load_doc(q: str):
+    def load():
+        return _doc_items(http.get_json(GDELT_DOC, source="GDELT", params={
+            "query": _doc_query(q), "mode": "ArtList", "format": "json",
+            "maxrecords": DOC_MAX, "timespan": DOC_TIMESPAN, "sort": "DateDesc", "sourcelang": "eng"}))
+    return load
 
 
 def _local(tag: Any) -> str:
@@ -151,14 +193,19 @@ def news(q: str | None = None, limit: Any = None) -> dict:
         snaps = list(pool.map(lambda f: _cache.fetch(f"news:{f[0]}", NEWS_TTL, _load_feed(*f), source=f[0]), FEEDS))
     feeds = [{"source": name, "status": s["status"], "error": s["error"], "count": len(s["value"] or [])}
              for (name, _), s in zip(FEEDS, snaps)]
+    query = str(q or "").strip()
+    doc = _cache.fetch(f"news-gdelt:{query.lower()}", NEWS_TTL, _load_doc(query), source="GDELT") if query else None
+    if doc is not None:
+        feeds.append({"source": "GDELT", "status": doc["status"], "error": doc["error"],
+                      "count": len(doc["value"] or [])})
     with_data = [s for s in snaps if s["value"] is not None]
-    if not with_data:
+    fresh = with_data + ([doc] if doc is not None and doc["value"] is not None else [])
+    if not fresh:
         raise UpstreamError(503, "None of the news feeds answered. " + " ".join(f["error"] or "" for f in feeds).strip())
-    merged = merge_headlines([s["value"] for s in with_data])
-    merged = search_headlines(merged, q)
+    merged = search_headlines(merge_headlines([s["value"] for s in fresh]), q)
     errors = [f"{f['source']}: {f['error']}" for f in feeds if f["error"]]
     return {
-        "updated": min(s["updated"] for s in with_data),
+        "updated": min(s["updated"] for s in fresh),
         "status": "ok" if not errors else "stale",
         "error": " ".join(errors) or None,
         "items": merged[: _clamp_limit(limit, 50, 200)],

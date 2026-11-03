@@ -60,7 +60,7 @@ are plain text (the page escapes nothing; never return HTML).
 | `weather` | Severe weather (US) | NWS `api.weather.gov/alerts/active?severity=Extreme,Severe` | NWS `event` text | 5 min | polygon → centroid; zone-only alerts without geometry are dropped (counted) |
 | `aircraft` | Aircraft | adsb.lol `v2/mil` (global military) + `v2/point/{lat}/{lon}/{radius}` when `?lat=&lon=` given (radius ≤ 250 nm) | `military`, `civil` | 15 s mil, 10 s point | `alt_km` from alt_baro ft; ground traffic dropped; title = callsign or reg; props: type, reg, squawk, alt, speed |
 | `satellites` | Satellites | CelesTrak `gp.php?GROUP=…&FORMAT=json` for groups `stations`, `gps-ops`, `weather`, `military`? (only groups that exist; ≤ 400 objects total) | group name | 6 h | **items carry `omm` (the raw CelesTrak OMM dict) and lat/lon null**; the page propagates with SGP4 |
-| `incidents` | News incidents | GDELT 2.0 events: `lastupdate.txt` → latest `export.CSV.zip`; keep a rolling 3 h window (12 files) | CAMEO root: `protest`, `force`, `assault`, `fight`, `mass-violence`, `coerce`, `threaten` | 15 min | only QuadClass 3/4 roots 14,17–20; aggregate same ActionGeo point+root into one item with `count`; title like "Fight · Kharkiv, Ukraine"; url = a SOURCEURL; severity from mentions + Goldstein |
+| `incidents` | News incidents | GDELT 2.0 events: `lastupdate.txt` → latest `export.CSV.zip`; keep a rolling 3 h window (12 files) | CAMEO root: `protest`, `force`, `assault`, `fight`, `mass-violence`, `coerce`, `threaten` | 15 min | only QuadClass 3/4 roots 13–15, 17–20; aggregate same ActionGeo point+root into one item with `count`; title = the root label plus a headline read from the article URL slug (e.g. "Fight · Buses vandalized with swastikas antisemitic vitriol outside nyc yeshiva cops"), falling back to the place name when no slug is readable (e.g. "Fight · Kharkiv, Ukraine"); when a headline exists the place goes in the subtitle instead; url = a SOURCEURL; severity from mentions + Goldstein; one article double-coded under two roots at the same point collapses into the stronger item, which gains an `Also coded` prop naming the dropped root (so item count is not 1:1 with place+root groups; the survivor keeps its own `incidents:{root}:{lat},{lon}` id); `Place precision` (e.g. `Country only`) flags centroid-grade geometry and is emitted high in `props` so the 8-prop cap trims `Actors`, never this flag |
 | `chokepoints` | Chokepoints | static curated list in code (≈ 15: Hormuz, Bab-el-Mandeb, Suez, Malacca, Panama, Bosporus, Gibraltar, Dover, Taiwan Strait, Lombok, Danish straits, Cape of Good Hope, Kerch, Sunda, Magellan) | `strait`, `canal` | static | props: what passes through (plain facts, no numbers you can't source) |
 
 Layer-specific query params are validated (floats in range, radius clamp) and are part of the cache key.
@@ -69,7 +69,11 @@ Layer-specific query params are validated (floats in range, radius clamp) and ar
 
 `GET /news?q=&limit=` → `{"ok": true, "updated": ms, "items": [{"id", "title", "url", "source", "time", "summary"}]}`
 Merged headlines from a few public RSS feeds (BBC World, Al Jazeera, DW, The Guardian World, France 24
-English). `q` filters case-insensitively on title/summary. Cache 10 min. Plain text only (strip tags).
+English). When `q` is non-empty the GDELT 2.0 article-search API (`api.gdeltproject.org/api/v2/doc/doc`,
+no key, last 24 h, max 50 articles) is queried too and its articles merge into the same list — `feeds`
+then carries a `GDELT` source entry — and the `q` title/summary filter still applies to them, so this is
+a wider headline search, not full-text. Cache 10 min (the GDELT leg caches per query). Plain text only
+(strip tags).
 
 `GET /space-weather` → `{"ok": true, "updated": ms, "kp": [{"time", "kp"}] (last 7 days), "kp_now": 3.3,
 "scales": {"R": 0, "S": 0, "G": 1} (from SWPC noaa-scales.json), "alerts": [{"time", "code", "headline"}] (latest 8)}`
@@ -121,7 +125,7 @@ Toolset `osint_map`. Plain-text results the model can quote, with source names.
 ## Politeness
 
 One shared TTL cache per (route, params) in the process; refresh only when asked (the page polls
-while open; tools call on demand). Honest User-Agent `hermes-osint-map/0.1 (+https://github.com/Adolanium/hermes-osint-map)`.
+while open; tools call on demand). Honest User-Agent `hermes-osint-map/0.3 (+https://github.com/Adolanium/hermes-osint-map)`.
 Timeouts 10–20 s. Bounded memory everywhere (cap items per layer at 5,000; aircraft at 3,000).
 
 ## Backend notes (as implemented, 2026-10-23)

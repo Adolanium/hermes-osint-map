@@ -11,7 +11,7 @@
   Earthquakes, disaster alerts, natural events, severe weather, aircraft, satellites, news-derived incidents, traffic cameras and shipping chokepoints on a dithered 3D globe inside Hermes Desktop.
   Country dossiers, a passive recon toolkit, and briefings Hermes writes from the same public sources.
 
-  <sub>POWERED BY <a href="https://github.com/NousResearch/hermes-agent">HERMES AGENT</a> &nbsp;·&nbsp; COMMUNITY PLUGIN &nbsp;·&nbsp; VERSION 0.2.0</sub>
+  <sub>POWERED BY <a href="https://github.com/NousResearch/hermes-agent">HERMES AGENT</a> &nbsp;·&nbsp; COMMUNITY PLUGIN &nbsp;·&nbsp; VERSION 0.3.0</sub>
 
   <br /><br />
 
@@ -69,6 +69,8 @@ Every source is public and needs no account. The page's "Brief me", "Ask Hermes"
 | `osint_recon` | any recon lookup |
 | `osint_news` | headline search |
 
+When a query is given, `osint_news` also calls the GDELT 2.0 article-search API (`api.gdeltproject.org/api/v2/doc/doc`, no key, 10-minute cache) so local and specialist stories appear, not just the five world services.
+
 ## Small decisions, already made
 
 - Layers never depend on colour alone: each has its own shape, and every colour comes from your Hermes theme.
@@ -79,7 +81,7 @@ Every source is public and needs no account. The page's "Brief me", "Ask Hermes"
 - Headline search matches every word in any order.
 - Traffic cameras come only from official open-data feeds. They cluster into one marker per city until you zoom in, and a camera's still is fetched by its id from the operator's own image host, never from an address the page supplies.
 - Recon lookups that connect to a host refuse private, loopback, link-local and other internal addresses, before and after redirects.
-- News incidents are machine-coded from news coverage. The page and the tools say so; they show where reporting is, not verified events.
+- News incidents are machine-coded from news coverage. The page and the tools say so; they show where reporting is, not verified events. Their titles come from the source article's URL slug when one is readable, and fall back to the place name when it is not.
 - The page stops all polling and rendering when you leave it or the window is hidden. It respects reduced motion and works in split tiles.
 
 ## Make it yours
@@ -132,7 +134,7 @@ Hermes gateway  →  public data sources (fixed hosts, cached)  →  the globe, 
 
 | Hermes Agent | Python | Status |
 | --- | --- | --- |
-| 0.22.5 | 3.14 | Tested by hand in Hermes Desktop (0.1.0) and in a browser preview of the page (0.2.0) |
+| 0.22.5 | 3.14 | Tested by hand in Hermes Desktop (0.1.0, 0.3.0) and in a browser preview of the page (0.2.0) |
 | 0.22.2 (minimum) | 3.11+ | SDK surface checked |
 
 The plugin depends only on `httpx` and `fastapi`, which Hermes already ships.
@@ -142,13 +144,13 @@ The plugin depends only on `httpx` and `fastapi`, which Hermes already ships.
 - Aircraft come from volunteer ADS-B receivers: coverage is thin over oceans and some regions, and military traffic only shows when it broadcasts.
 - Severe weather covers the United States only (NWS). Alerts without a mapped area are skipped.
 - Traffic cameras cover London and Singapore for now. Both publish stills, not live video, refreshed every minute or so.
-- GDELT incidents are machine-coded from news. Locations are often a city or country centroid, and labels like "Fight" describe the coverage, not a verified event.
+- GDELT incidents are machine-coded from news. Locations are often a city or country centroid, and labels like "Fight" describe the coverage, not a verified event. Titles echo the article's own headline when its URL slug is readable, and the place name when it is not.
 - crt.sh, behind subdomain lookups, is often slow or down. Those lookups then fail with a clear error.
 - Without a Twelve Data key, the markets panel shows crypto only.
 
 ## Data and credits
 
-Earthquakes: USGS (public domain). Natural events: NASA EONET (public domain). Disaster alerts: GDACS. Severe weather: National Weather Service (public domain). Incidents: The GDELT Project. Aircraft: adsb.lol (ODbL). Satellites: CelesTrak. Traffic cameras: Powered by TfL Open Data (contains OS data © Crown copyright and database rights); Singapore traffic images from data.gov.sg under the Singapore Open Data Licence v1.0. Space weather: NOAA SWPC (public domain). Country facts: World Bank (CC BY 4.0). Headlines: links and titles from public RSS feeds. Borders: Natural Earth (public domain). Rendering: three.js (MIT); orbits: satellite.js (MIT).
+Earthquakes: USGS (public domain). Natural events: NASA EONET (public domain). Disaster alerts: GDACS. Severe weather: National Weather Service (public domain). Incidents: The GDELT Project. Aircraft: adsb.lol (ODbL). Satellites: CelesTrak. Traffic cameras: Powered by TfL Open Data (contains OS data © Crown copyright and database rights); Singapore traffic images from data.gov.sg under the Singapore Open Data Licence v1.0. Space weather: NOAA SWPC (public domain). Country facts: World Bank (CC BY 4.0). Headlines: links and titles from public RSS feeds, plus the GDELT 2.0 article search when a query is given. Borders: Natural Earth (public domain). Rendering: three.js (MIT); orbits: satellite.js (MIT).
 
 <br />
 

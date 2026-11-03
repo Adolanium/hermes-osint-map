@@ -62,7 +62,9 @@ SCHEMAS = {
     ),
     "osint_news": _schema(
         "osint_news",
-        "Search recent world headlines merged from BBC World, Al Jazeera, DW, The Guardian and France 24.",
+        "Search recent world headlines: BBC World, Al Jazeera, DW, The Guardian and France 24, plus the "
+        "GDELT 2.0 article-search API when a query is given (wider local coverage). GDELT results are recent "
+        "article listings, not editorially curated.",
         {"query": {"type": "string", "description": "Words to find in titles and summaries; empty for the latest."},
          "limit": {"type": "integer", "description": "Maximum headlines (default 10, max 50)."}},
     ),
@@ -85,7 +87,9 @@ def _item_line(entry: dict) -> str:
     if entry.get("time"):
         bits.append(f"at {_when(entry['time'])}")
     if entry.get("lat") is not None:
-        bits.append(f"{entry['lat']:.2f},{entry['lon']:.2f}")
+        note = " (country-level accuracy)" if any(
+            len(p) > 1 and p[0] == "Place precision" for p in entry.get("props", [])) else ""
+        bits.append(f"{entry['lat']:.2f},{entry['lon']:.2f}{note}")
     if entry.get("url"):
         bits.append(entry["url"])
     return "- " + " ".join(bits)
@@ -218,7 +222,7 @@ def country(args: dict) -> str:
         heads = panels.news(q=name, limit=8)["items"]
         lines += ["", f"Headlines mentioning {name}: {len(heads)}"]
         lines += [f"- {h['title']} ({h['source']}, {_when(h['time'])}) {h['url']}" for h in heads]
-        sources.append("RSS headlines")
+        sources.append("RSS/GDELT headlines")
     except UpstreamError as exc:
         lines += ["", f"Headlines unavailable: {exc}"]
     return _ok("\n".join(lines), sources=sources)

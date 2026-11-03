@@ -4,10 +4,13 @@ GDELT publishes a zipped tab-separated export of coded news events every 15 minu
 newest one in ``lastupdate.txt``. This module keeps a rolling window of the last ``WINDOW`` exports
 (3 hours), parses only conflict-type events, and folds rows that share a place and a CAMEO root
 code into one item with a ``count``, so a city with forty "fight" reports is one marker, not forty.
+A second stage collapses the same article coded at the same place under two roots — one URL and one
+coordinate cell is one item, the most severe coding survives and the dropped labels are shown as
+"Also coded".
 
 Each export is downloaded once: a refresh only fetches stamps that entered the window, and stamps
-that left it are dropped, so memory stays bounded by the window. GDELT's doc/search API is rate
-limited and not used.
+that left it are dropped, so memory stays bounded by the window. GDELT's doc/search API is rate limited
+and is used only by the news panel's queried headline search.
 """
 
 from __future__ import annotations
@@ -21,6 +24,7 @@ from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from typing import Callable
+from urllib.parse import urlsplit
 
 from . import geo
 from .http import UpstreamError
@@ -168,6 +172,26 @@ def short_place(full: str | None) -> str:
     return f"{parts[0]}, {parts[-1]}" if len(parts) >= 3 else ", ".join(parts)
 
 
+def headline_from_url(url: str | None) -> str | None:
+    """Best-effort headline from the article URL slug — GDELT exports carry no titles.
+    Ported from HORUS (github.com/thielbro/horus, src/app/api/gdelt/route.ts, MIT),
+    with a stricter word filter: only pure-alphabetic tokens count, so hash-style
+    slugs (article_d1c9a62b-4202-...) fall back to the place name instead of noise."""
+    if not url:
+        return None
+    try:
+        path = urlsplit(url).path
+    except ValueError:
+        return None
+    for segment in reversed([s for s in path.split("/") if s]):
+        segment = re.sub(r"\.(html?|php|aspx?)$", "", segment, flags=re.I)
+        words = [w for w in re.split(r"[-_]+", segment) if w.isalpha()]
+        if len(words) >= 4:
+            headline = " ".join(words)
+            return headline[0].upper() + headline[1:]
+    return None
+
+
 def incident_severity(mentions: int, goldstein_min: float) -> float:
     """More coverage and a more negative Goldstein score (−10 is the most destabilising) → brighter.
     Coverage saturates at about 100 mentions."""
@@ -176,23 +200,55 @@ def incident_severity(mentions: int, goldstein_min: float) -> float:
     return clamp01(0.1 + 0.9 * (0.55 * coverage + 0.45 * impact))
 
 
+def collapse_articles(groups: dict[str, dict]) -> tuple[dict[str, dict], dict[str, list[str]]]:
+    """One article at one place can be coded under two CAMEO roots (a Threaten row and a
+    Coerce row for the same URL and coordinates). HORUS keys events by url+cell and keeps
+    one; we keep the most severe item and say what was folded away. Returns (survivors,
+    survivors_key -> dropped labels). Groups without a URL never collapse. Severity ties are
+    broken by the group key, so the survivor — and therefore the item id — never depends on the
+    order the merged dict happened to be built in."""
+    survivors: dict[str, dict] = {}
+    labels: dict[str, list[str]] = {}
+    seen: dict[str, str] = {}
+    for key, g in sorted(groups.items(),
+                         key=lambda kv: (incident_severity(kv[1]["mentions"], kv[1]["goldstein_min"]), kv[0]),
+                         reverse=True):
+        cell = key.split(":", 1)[1]  # the key is "{root}:{lat:.4f},{lon:.4f}"; the cell is its tail
+        dup = f"{g['url']}|{cell}" if g["url"] else f"nourl:{key}"
+        if dup in seen:
+            labels.setdefault(seen[dup], []).append(ROOTS[g["root"]][1])
+        else:
+            seen[dup] = key
+            survivors[key] = g
+    return survivors, labels
+
+
 def to_items(groups: dict[str, dict], limit: int = MAX_ITEMS) -> list[dict]:
+    groups, extras = collapse_articles(groups)
     out = []
     for key, g in groups.items():
         kind, label = ROOTS[g["root"]]
         n = g["events"] or 1
         country = geo.from_fips(g["fips"]) or geo.from_place(g["place"])
+        where = short_place(g["place"])
+        headline = headline_from_url(g["url"])
+        counts = f"{g['events']} report{'s' if g['events'] != 1 else ''} · {g['mentions']} mentions"
         out.append(item(
-            "incidents", key, kind, g["lat"], g["lon"], f"{label} · {short_place(g['place'])}",
-            subtitle=f"{g['events']} report{'s' if g['events'] != 1 else ''} · {g['mentions']} mentions",
+            "incidents", key, kind, g["lat"], g["lon"], f"{label} · {headline or where}",
+            subtitle=f"{where} · {counts}" if headline else counts,
             severity=incident_severity(g["mentions"], g["goldstein_min"]),
             time=g["added"],
             country=country,
             url=g["url"],
-            rows=[("Type", label), ("Reports", g["events"]), ("Mentions", g["mentions"]), ("Sources", g["sources"]),
+            rows=[("Type", label),
+                  # precision first after Type: with Also coded + Actors present this is a 9-row set
+                  # and parsers.props' MAX_PROPS clamp would drop the last row — the one flag
+                  # tools._item_line needs — so it sits high and the clamp trims Actors instead.
+                  ("Place precision", "Country only" if g["geo_type"] == "1" else None),
+                  *([("Also coded", ", ".join(dict.fromkeys(extras[key])))] if key in extras else []),
+                  ("Reports", g["events"]), ("Mentions", g["mentions"]), ("Sources", g["sources"]),
                   ("Goldstein (avg)", f"{g['goldstein_sum'] / n:.1f}"), ("Tone (avg)", f"{g['tone_sum'] / n:.1f}"),
-                  ("Actors", ", ".join(g["actors"]) or None),
-                  ("Place precision", "Country only" if g["geo_type"] == "1" else None)],
+                  ("Actors", ", ".join(g["actors"]) or None)],
             count=g["events"],
         ))
     out.sort(key=lambda i: (i["severity"], i["time"] or 0), reverse=True)

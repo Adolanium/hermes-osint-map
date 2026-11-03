@@ -93,6 +93,46 @@ def test_news_with_no_feed_at_all_raises(monkeypatch):
         panels.news()
 
 
+def test_doc_items_shape_headline_dicts(fixture):
+    items = panels._doc_items(fixture("gdelt_doc.json"))
+    assert len(items) == 2  # the no-URL and no-title rows are dropped
+    assert items[0]["source"] == "GDELT" and items[0]["time"] == ms(2026, 11, 2, 22, 15)
+    assert items[0]["url"].startswith("https://nypost.com") and items[0]["summary"] is None
+
+
+def test_doc_query_quotes_every_word_for_and_semantics():
+    assert panels._doc_query("yeshiva buses vandalized") == '"yeshiva" "buses" "vandalized"'
+    assert panels._doc_query("one") == '"one"'
+
+
+def test_news_query_merges_gdelt_results(monkeypatch, fixture):
+    monkeypatch.setattr(panels, "_cache", SnapshotCache())
+    monkeypatch.setattr(panels.http, "get",
+                        lambda url, **kw: (_ for _ in ()).throw(UpstreamError(503, "rss down")))
+    monkeypatch.setattr(panels.http, "get_json", lambda url, **kw: fixture("gdelt_doc.json"))
+    answer = panels.news(q="yeshiva")
+    assert [i["source"] for i in answer["items"]] == ["GDELT", "GDELT"]
+    assert answer["items"][0]["time"] == ms(2026, 11, 2, 23, 0)  # newest first
+    assert {f["source"]: (f["status"], f["count"]) for f in answer["feeds"]}["GDELT"] == ("ok", 2)
+
+
+def test_news_survives_gdelt_down_and_reports_it(monkeypatch):
+    monkeypatch.setattr(panels, "_cache", SnapshotCache())
+
+    def fake_get(url, **kwargs):
+        if "dw.com" in url:
+            return net.Response(200, {}, RSS, url)
+        raise UpstreamError(503, f"{kwargs['source']} is having trouble (HTTP 503).")
+
+    monkeypatch.setattr(panels.http, "get", fake_get)
+    monkeypatch.setattr(panels.http, "get_json",
+                        lambda url, **kw: (_ for _ in ()).throw(UpstreamError(502, "gdelt down")))
+    answer = panels.news(q="ALBANIA")
+    assert [i["title"] for i in answer["items"]] == ["Albania's student protests grow"]
+    gdelt_feed = {f["source"]: f for f in answer["feeds"]}["GDELT"]
+    assert gdelt_feed["status"] != "ok" and "GDELT" in answer["error"]
+
+
 # --- Space weather ---------------------------------------------------------------------------------
 
 
