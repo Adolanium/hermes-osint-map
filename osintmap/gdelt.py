@@ -241,11 +241,14 @@ def to_items(groups: dict[str, dict], limit: int = MAX_ITEMS) -> list[dict]:
             country=country,
             url=g["url"],
             rows=[("Type", label),
+                  # precision first after Type: with Also coded + Actors present this is a 9-row set
+                  # and parsers.props' MAX_PROPS clamp would drop the last row — the one flag
+                  # tools._item_line needs — so it sits high and the clamp trims Actors instead.
+                  ("Place precision", "Country only" if g["geo_type"] == "1" else None),
                   *([("Also coded", ", ".join(dict.fromkeys(extras[key])))] if key in extras else []),
                   ("Reports", g["events"]), ("Mentions", g["mentions"]), ("Sources", g["sources"]),
                   ("Goldstein (avg)", f"{g['goldstein_sum'] / n:.1f}"), ("Tone (avg)", f"{g['tone_sum'] / n:.1f}"),
-                  ("Actors", ", ".join(g["actors"]) or None),
-                  ("Place precision", "Country only" if g["geo_type"] == "1" else None)],
+                  ("Actors", ", ".join(g["actors"]) or None)],
             count=g["events"],
         ))
     out.sort(key=lambda i: (i["severity"], i["time"] or 0), reverse=True)

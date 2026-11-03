@@ -5,7 +5,7 @@ import zipfile
 
 import pytest
 
-from osintmap import gdelt
+from osintmap import gdelt, parsers, tools
 from osintmap.http import UpstreamError
 
 LASTUPDATE = (
@@ -23,12 +23,13 @@ def zipped(body: str, name: str = "x.export.CSV") -> bytes:
 
 
 def row(root="19", quad="4", lat="50.0", lon="36.25", place="Kharkiv, Kharkivs'ka Oblast', Ukraine", fips="UP",
-        mentions="10", goldstein="-10.0", added="20261023044500", url="https://news.example.com/a", actor="RUSSIA"):
+        mentions="10", goldstein="-10.0", added="20261023044500", url="https://news.example.com/a", actor="RUSSIA",
+        geo="4"):
     fields = [""] * 61
     fields[6], fields[16] = actor, "UKRAINE"
     fields[26], fields[27], fields[28], fields[29] = root + "0", root + "0", root, quad
     fields[30], fields[31], fields[32], fields[33], fields[34] = goldstein, mentions, "3", mentions, "-5.5"
-    fields[51], fields[52], fields[53], fields[56], fields[57] = "4", place, fips, lat, lon
+    fields[51], fields[52], fields[53], fields[56], fields[57] = geo, place, fips, lat, lon
     fields[59], fields[60] = added, url
     return "\t".join(fields)
 
@@ -204,3 +205,21 @@ def test_groups_without_urls_never_collapse():
     items = gdelt.to_items(groups)
     assert len(items) == 2
     assert {i["kind"] for i in items} == {"threaten", "coerce"}
+
+
+def test_country_centroid_cross_root_collapse_keeps_place_precision():
+    """A country-centroid incident that also cross-root-collapses has actors too, so nine prop
+    rows compete for ``MAX_PROPS`` slots. The clamp must drop the least load-bearing row, never
+    the 'Place precision' flag that tools._item_line turns into '(country-level accuracy)'."""
+    centroid = dict(geo="1", lat="49.0", lon="32.0", place="Ukraine",
+                    url="https://news.example.com/ukrainian-units-rotate")
+    groups = gdelt.parse_export("\n".join([
+        row(root="13", mentions="33", **centroid), row(root="17", mentions="46", **centroid)]))
+    items = gdelt.to_items(groups)
+    assert len(items) == 1
+    item = items[0]
+    labels = [p[0] for p in item["props"]]
+    # every row fired (collapse → 'Also coded', geo_type 1 → 'Place precision', default actors)
+    assert "Also coded" in labels and len(labels) == parsers.MAX_PROPS  # 9 candidates, clamp in force
+    assert ["Place precision", "Country only"] in item["props"]
+    assert "(country-level accuracy)" in tools._item_line(item)
