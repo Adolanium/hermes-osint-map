@@ -1,0 +1,10 @@
+{"peers": [], "articles": [
+  {"url": "https://nypost.com/2026/11/02/us-news/4-buses-vandalized-with-swastikas-antisemitic-vitriol-outside-nyc-yeshiva-cops/",
+   "title": "4 school buses vandalized with swastikas, antisemitic vitriol outside NYC yeshiva: cops",
+   "seendate": "20261102T221500Z", "domain": "nypost.com", "language": "English", "sourcecountry": "United States"},
+  {"url": "https://www.cbsnews.com/newyork/video/yeshiva-buses-graffiti/",
+   "title": "Hate-crime investigation after yeshiva buses tagged in Williamsburg",
+   "seendate": "20261102T230000Z", "domain": "cbsnews.com", "language": "English", "sourcecountry": "United States"},
+  {"url": "not-a-url", "title": "Dropped row", "seendate": "20261102T200000Z"},
+  {"url": "https://example.com/x", "title": "", "seendate": "20261102T200000Z"}
+]}
