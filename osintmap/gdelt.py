@@ -21,6 +21,7 @@ from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from typing import Callable
+from urllib.parse import urlsplit
 
 from . import geo
 from .http import UpstreamError
@@ -168,6 +169,26 @@ def short_place(full: str | None) -> str:
     return f"{parts[0]}, {parts[-1]}" if len(parts) >= 3 else ", ".join(parts)
 
 
+def headline_from_url(url: str | None) -> str | None:
+    """Best-effort headline from the article URL slug — GDELT exports carry no titles.
+    Ported from HORUS (github.com/thielbro/horus, src/app/api/gdelt/route.ts, MIT),
+    with a stricter word filter: only pure-alphabetic tokens count, so hash-style
+    slugs (article_d1c9a62b-4202-...) fall back to the place name instead of noise."""
+    if not url:
+        return None
+    try:
+        path = urlsplit(url).path
+    except ValueError:
+        return None
+    for segment in reversed([s for s in path.split("/") if s]):
+        segment = re.sub(r"\.(html?|php|aspx?)$", "", segment, flags=re.I)
+        words = [w for w in re.split(r"[-_]+", segment) if w.isalpha()]
+        if len(words) >= 4:
+            headline = " ".join(words)
+            return headline[0].upper() + headline[1:]
+    return None
+
+
 def incident_severity(mentions: int, goldstein_min: float) -> float:
     """More coverage and a more negative Goldstein score (−10 is the most destabilising) → brighter.
     Coverage saturates at about 100 mentions."""
@@ -182,9 +203,12 @@ def to_items(groups: dict[str, dict], limit: int = MAX_ITEMS) -> list[dict]:
         kind, label = ROOTS[g["root"]]
         n = g["events"] or 1
         country = geo.from_fips(g["fips"]) or geo.from_place(g["place"])
+        where = short_place(g["place"])
+        headline = headline_from_url(g["url"])
+        counts = f"{g['events']} report{'s' if g['events'] != 1 else ''} · {g['mentions']} mentions"
         out.append(item(
-            "incidents", key, kind, g["lat"], g["lon"], f"{label} · {short_place(g['place'])}",
-            subtitle=f"{g['events']} report{'s' if g['events'] != 1 else ''} · {g['mentions']} mentions",
+            "incidents", key, kind, g["lat"], g["lon"], f"{label} · {headline or where}",
+            subtitle=f"{where} · {counts}" if headline else counts,
             severity=incident_severity(g["mentions"], g["goldstein_min"]),
             time=g["added"],
             country=country,

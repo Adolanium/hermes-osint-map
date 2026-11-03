@@ -49,8 +49,11 @@ def test_recorded_export_keeps_only_conflict_roots(fixture):
     roots = {g["root"] for g in groups.values()}
     assert roots == {"19"}  # the fixture's 04/01 (consult, make statement) rows are skipped
     canberra = next(g for g in groups.values() if g["place"].startswith("Canberra"))
-    items = {i["title"]: i for i in gdelt.to_items(groups)}
-    assert items["Fight · Canberra, Australia"]["country"] == "AU"  # FIPS AS is Australia, not American Samoa
+    items = gdelt.to_items(groups)
+    au = [i for i in items if i["country"] == "AU"]
+    assert len(au) == 1  # FIPS AS is Australia, not American Samoa
+    assert au[0]["title"] == "Fight · Bruce wolpe the eerie similarity of gabrielle giffords and helen haines cases"
+    assert "Canberra, Australia" in au[0]["subtitle"]
     assert canberra["events"] == 1
 
 
@@ -149,3 +152,19 @@ def test_short_place():
     assert gdelt.short_place("Kharkiv, Kharkivs'ka Oblast', Ukraine") == "Kharkiv, Ukraine"
     assert gdelt.short_place("Ohio, United States") == "Ohio, United States"
     assert gdelt.short_place(None) == "Unknown place"
+
+
+def test_headline_from_url_reads_the_last_wordy_slug():
+    assert gdelt.headline_from_url(
+        "https://nypost.com/2026-11-02/us-news/4-buses-vandalized-with-swastikas-"
+        "antisemitic-vitriol-outside-nyc-yeshiva-cops/"
+    ) == "Buses vandalized with swastikas antisemitic vitriol outside nyc yeshiva cops"
+
+
+def test_headline_from_url_falls_back_on_hash_slugs_and_query_urls():
+    assert gdelt.headline_from_url("https://news.example.com/a") is None
+    assert gdelt.headline_from_url(
+        "https://www.newarkpostonline.com/article_d1c9a62b-4202-4103-b72f-8dd5fcbd61a8.html"
+    ) is None  # "article", hex tokens and digit runs are not a headline
+    assert gdelt.headline_from_url("not a url") is None
+    assert gdelt.headline_from_url(None) is None
