@@ -4,6 +4,9 @@ GDELT publishes a zipped tab-separated export of coded news events every 15 minu
 newest one in ``lastupdate.txt``. This module keeps a rolling window of the last ``WINDOW`` exports
 (3 hours), parses only conflict-type events, and folds rows that share a place and a CAMEO root
 code into one item with a ``count``, so a city with forty "fight" reports is one marker, not forty.
+A second stage collapses the same article coded at the same place under two roots — one URL and one
+coordinate cell is one item, the most severe coding survives and the dropped labels are shown as
+"Also coded".
 
 Each export is downloaded once: a refresh only fetches stamps that entered the window, and stamps
 that left it are dropped, so memory stays bounded by the window. GDELT's doc/search API is rate
@@ -201,14 +204,16 @@ def collapse_articles(groups: dict[str, dict]) -> tuple[dict[str, dict], dict[st
     """One article at one place can be coded under two CAMEO roots (a Threaten row and a
     Coerce row for the same URL and coordinates). HORUS keys events by url+cell and keeps
     one; we keep the most severe item and say what was folded away. Returns (survivors,
-    survivors_key -> dropped labels). Groups without a URL never collapse."""
+    survivors_key -> dropped labels). Groups without a URL never collapse. Severity ties are
+    broken by the group key, so the survivor — and therefore the item id — never depends on the
+    order the merged dict happened to be built in."""
     survivors: dict[str, dict] = {}
     labels: dict[str, list[str]] = {}
     seen: dict[str, str] = {}
     for key, g in sorted(groups.items(),
-                         key=lambda kv: incident_severity(kv[1]["mentions"], kv[1]["goldstein_min"]),
+                         key=lambda kv: (incident_severity(kv[1]["mentions"], kv[1]["goldstein_min"]), kv[0]),
                          reverse=True):
-        cell = f"{g['lat']:.4f},{g['lon']:.4f}"
+        cell = key.split(":", 1)[1]  # the key is "{root}:{lat:.4f},{lon:.4f}"; the cell is its tail
         dup = f"{g['url']}|{cell}" if g["url"] else f"nourl:{key}"
         if dup in seen:
             labels.setdefault(seen[dup], []).append(ROOTS[g["root"]][1])

@@ -79,7 +79,7 @@ Every source is public and needs no account. The page's "Brief me", "Ask Hermes"
 - Headline search matches every word in any order.
 - Traffic cameras come only from official open-data feeds. They cluster into one marker per city until you zoom in, and a camera's still is fetched by its id from the operator's own image host, never from an address the page supplies.
 - Recon lookups that connect to a host refuse private, loopback, link-local and other internal addresses, before and after redirects.
-- News incidents are machine-coded from news coverage. The page and the tools say so; they show where reporting is, not verified events.
+- News incidents are machine-coded from news coverage. The page and the tools say so; they show where reporting is, not verified events. Their titles come from the source article's URL slug when one is readable, and fall back to the place name when it is not.
 - The page stops all polling and rendering when you leave it or the window is hidden. It respects reduced motion and works in split tiles.
 
 ## Make it yours
@@ -142,7 +142,7 @@ The plugin depends only on `httpx` and `fastapi`, which Hermes already ships.
 - Aircraft come from volunteer ADS-B receivers: coverage is thin over oceans and some regions, and military traffic only shows when it broadcasts.
 - Severe weather covers the United States only (NWS). Alerts without a mapped area are skipped.
 - Traffic cameras cover London and Singapore for now. Both publish stills, not live video, refreshed every minute or so.
-- GDELT incidents are machine-coded from news. Locations are often a city or country centroid, and labels like "Fight" describe the coverage, not a verified event.
+- GDELT incidents are machine-coded from news. Locations are often a city or country centroid, and labels like "Fight" describe the coverage, not a verified event. Titles repeat the article's own headline when its URL slug is readable, and the place name when it is not.
 - crt.sh, behind subdomain lookups, is often slow or down. Those lookups then fail with a clear error.
 - Without a Twelve Data key, the markets panel shows crypto only.
 

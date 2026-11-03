@@ -55,6 +55,10 @@ def test_recorded_export_keeps_only_conflict_roots(fixture):
     assert au[0]["title"] == "Fight · Bruce wolpe the eerie similarity of gabrielle giffords and helen haines cases"
     assert "Canberra, Australia" in au[0]["subtitle"]
     assert canberra["events"] == 1
+    # a hash-style last slug falls back to the previous (readable) path segment
+    newark = [i for i in items if (i["url"] or "").startswith("http://www.newarkpostonline.com")]
+    assert {i["title"] for i in newark} == {
+        "Fight · New castle county to expedite next reassessment by year after discovering errors"}
 
 
 def test_rows_at_the_same_place_and_root_fold_into_one_item():
@@ -177,5 +181,26 @@ def test_one_article_at_one_place_collapses_across_roots():
     ]))
     items = gdelt.to_items(groups)
     assert len(items) == 1
+    assert items[0]["id"] == "incidents:17:50.0000,36.2500"
     assert items[0]["kind"] == "coerce"  # 46 mentions > 33 → the more-covered coding survives
     assert [p for p in items[0]["props"] if p[0] == "Also coded"] == [["Also coded", "Threaten"]]
+
+
+def test_equal_severity_collapse_keeps_the_higher_group_key_whatever_the_row_order():
+    """Same URL, same place, equal severity: the survivor must not depend on the order the
+    merged dict happens to be built in, or the item id flips between refreshes."""
+    tied = dict(mentions="40", url="https://news.example.com/tied")
+    forwards = gdelt.to_items(gdelt.parse_export("\n".join([
+        row(root="13", **tied), row(root="17", **tied)])))
+    backwards = gdelt.to_items(gdelt.parse_export("\n".join([
+        row(root="17", **tied), row(root="13", **tied)])))
+    assert len(forwards) == len(backwards) == 1
+    assert forwards[0]["id"] == backwards[0]["id"] == "incidents:17:50.0000,36.2500"
+
+
+def test_groups_without_urls_never_collapse():
+    groups = gdelt.parse_export("\n".join([
+        row(root="13", mentions="40", url=""), row(root="17", mentions="40", url="")]))
+    items = gdelt.to_items(groups)
+    assert len(items) == 2
+    assert {i["kind"] for i in items} == {"threaten", "coerce"}
