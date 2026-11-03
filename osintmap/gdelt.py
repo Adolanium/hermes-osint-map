@@ -197,7 +197,29 @@ def incident_severity(mentions: int, goldstein_min: float) -> float:
     return clamp01(0.1 + 0.9 * (0.55 * coverage + 0.45 * impact))
 
 
+def collapse_articles(groups: dict[str, dict]) -> tuple[dict[str, dict], dict[str, list[str]]]:
+    """One article at one place can be coded under two CAMEO roots (a Threaten row and a
+    Coerce row for the same URL and coordinates). HORUS keys events by url+cell and keeps
+    one; we keep the most severe item and say what was folded away. Returns (survivors,
+    survivors_key -> dropped labels). Groups without a URL never collapse."""
+    survivors: dict[str, dict] = {}
+    labels: dict[str, list[str]] = {}
+    seen: dict[str, str] = {}
+    for key, g in sorted(groups.items(),
+                         key=lambda kv: incident_severity(kv[1]["mentions"], kv[1]["goldstein_min"]),
+                         reverse=True):
+        cell = f"{g['lat']:.4f},{g['lon']:.4f}"
+        dup = f"{g['url']}|{cell}" if g["url"] else f"nourl:{key}"
+        if dup in seen:
+            labels.setdefault(seen[dup], []).append(ROOTS[g["root"]][1])
+        else:
+            seen[dup] = key
+            survivors[key] = g
+    return survivors, labels
+
+
 def to_items(groups: dict[str, dict], limit: int = MAX_ITEMS) -> list[dict]:
+    groups, extras = collapse_articles(groups)
     out = []
     for key, g in groups.items():
         kind, label = ROOTS[g["root"]]
@@ -213,7 +235,9 @@ def to_items(groups: dict[str, dict], limit: int = MAX_ITEMS) -> list[dict]:
             time=g["added"],
             country=country,
             url=g["url"],
-            rows=[("Type", label), ("Reports", g["events"]), ("Mentions", g["mentions"]), ("Sources", g["sources"]),
+            rows=[("Type", label),
+                  *([("Also coded", ", ".join(dict.fromkeys(extras[key])))] if key in extras else []),
+                  ("Reports", g["events"]), ("Mentions", g["mentions"]), ("Sources", g["sources"]),
                   ("Goldstein (avg)", f"{g['goldstein_sum'] / n:.1f}"), ("Tone (avg)", f"{g['tone_sum'] / n:.1f}"),
                   ("Actors", ", ".join(g["actors"]) or None),
                   ("Place precision", "Country only" if g["geo_type"] == "1" else None)],

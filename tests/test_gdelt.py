@@ -168,3 +168,14 @@ def test_headline_from_url_falls_back_on_hash_slugs_and_query_urls():
     ) is None  # "article", hex tokens and digit runs are not a headline
     assert gdelt.headline_from_url("not a url") is None
     assert gdelt.headline_from_url(None) is None
+
+
+def test_one_article_at_one_place_collapses_across_roots():
+    groups = gdelt.parse_export("\n".join([
+        row(root="13", mentions="33", url="https://news.example.com/yeshiva-buses-swastikas"),
+        row(root="17", mentions="46", url="https://news.example.com/yeshiva-buses-swastikas"),
+    ]))
+    items = gdelt.to_items(groups)
+    assert len(items) == 1
+    assert items[0]["kind"] == "coerce"  # 46 mentions > 33 → the more-covered coding survives
+    assert [p for p in items[0]["props"] if p[0] == "Also coded"] == [["Also coded", "Threaten"]]
