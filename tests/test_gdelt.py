@@ -221,5 +221,6 @@ def test_country_centroid_cross_root_collapse_keeps_place_precision():
     labels = [p[0] for p in item["props"]]
     # every row fired (collapse → 'Also coded', geo_type 1 → 'Place precision', default actors)
     assert "Also coded" in labels and len(labels) == parsers.MAX_PROPS  # 9 candidates, clamp in force
+    assert "Actors" not in labels  # the clamp trims Actors; every load-bearing row survives
     assert ["Place precision", "Country only"] in item["props"]
     assert "(country-level accuracy)" in tools._item_line(item)
