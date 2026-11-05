@@ -84,16 +84,39 @@ export async function listWatches({ host, rest }) {
     rest('/watches').catch(() => null)
   ])
   if (jobs?.error && !Array.isArray(jobs?.jobs)) return { ok: false, error: jobs.error, watches: [] }
-  const records = new Map((memory?.watches ?? []).map(w => [w.id, w]))
-  const watches = (jobs?.jobs ?? [])
-    .filter(job => typeof job?.name === 'string' && job.name.startsWith(JOB_PREFIX))
-    .map(job => {
-      const id = WATCH_IN_PROMPT.exec(job.prompt_preview ?? job.prompt ?? '')?.[1] ?? null
-      const record = id ? records.get(id) : null
+  return { ok: true, watches: joinWatches(jobs?.jobs ?? [], memory?.watches ?? []) }
+}
+
+/**
+ * Pair cron jobs with watch records. A job is a watch when its name carries JOB_PREFIX (the page
+ * made it) or its prompt preview mentions osint_watch (the agent made it from a chat). The preview
+ * is cut at 100 characters, so when the watch id isn't in it the job is matched to a record whose
+ * label appears in the job's name or preview.
+ */
+export function joinWatches(jobs, records) {
+  const byId = new Map(records.map(w => [w.id, w]))
+  const claimed = new Set()
+  const candidates = jobs.filter(job => typeof job?.name === 'string' && (job.name.startsWith(JOB_PREFIX) || /osint_watch/.test(job.prompt_preview ?? job.prompt ?? '')))
+  const resolved = candidates.map(job => {
+    const id = WATCH_IN_PROMPT.exec(job.prompt_preview ?? job.prompt ?? '')?.[1] ?? null
+    if (id) claimed.add(id)
+    return { job, id }
+  })
+  for (const entry of resolved) {
+    if (entry.id) continue
+    const haystack = `${entry.job.name} ${entry.job.prompt_preview ?? ''}`.toLowerCase()
+    const match = records.find(r => !claimed.has(r.id) && r.label && haystack.includes(String(r.label).toLowerCase()))
+    if (match) {
+      entry.id = match.id
+      claimed.add(match.id)
+    }
+  }
+  return resolved.map(({ job, id }) => {
+      const record = id ? byId.get(id) : null
       return {
         jobId: job.job_id,
         id,
-        label: job.name.slice(JOB_PREFIX.length),
+        label: job.name.startsWith(JOB_PREFIX) ? job.name.slice(JOB_PREFIX.length) : job.name,
         schedule: job.schedule,
         deliver: job.deliver,
         enabled: job.enabled !== false && job.state !== 'paused',
@@ -107,7 +130,6 @@ export async function listWatches({ host, rest }) {
         alerts: record?.alerts ?? []
       }
     })
-  return { ok: true, watches }
 }
 
 export async function setWatchEnabled({ host }, watch, enabled) {

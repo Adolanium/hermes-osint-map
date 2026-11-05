@@ -133,7 +133,9 @@ def check(state: State, watch_id: str, args: dict) -> dict:
     status = ("" if not failing else " Some sources failed this time: " + "; ".join(failing) + ".")
     if baseline:
         text = (f"{NO_NEW} Watch {label!r} started: {len(matching)} items match its rules {watch_area.describe()} "
-                f"right now. They are recorded as the baseline; later checks report only new ones.{status}")
+                f"right now. They are recorded as the baseline; later checks report only new ones.{status} "
+                f"If you are setting up a scheduled job for this watch, name it 'OSINT watch · {label}' so the "
+                "OSINT Map page lists it.")
     elif not fresh:
         text = f"{NO_NEW} Watch {label!r}: nothing new {watch_area.describe()} since the last check.{status}"
     else:

@@ -59,6 +59,7 @@ def test_first_check_is_a_silent_baseline(world):
     assert answer["baseline"] and answer["new"] == 0 and answer["text"].startswith(watch.NO_NEW)
     assert answer["count"] == 2  # the M5.1 quake and the military jet; the green flood is under the bar
     assert state.data["watches"]["taiwan"]["label"] == "Taiwan"
+    assert "OSINT watch · Taiwan" in answer["text"]
 
 
 def test_later_checks_report_only_new_items_that_pass_the_rules(world):
