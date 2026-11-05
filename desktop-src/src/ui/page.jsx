@@ -8,6 +8,7 @@ import { createGlobe } from '../globe/globe.js'
 import { buildPalette, createColorResolver } from '../globe/palette.js'
 import { usePrefersReducedMotion, useThrottled } from './kit.jsx'
 import { CountryPanel, FeedCard, ItemPanel, LayersCard, MarketsCard, ReconDrawer, SpaceWeatherCard } from './panels.jsx'
+import { CyberCard, useCyberLayer } from './cyber.jsx'
 import { WatchDialog, WatchesCard } from './watches.jsx'
 import { CSS } from './styles.js'
 
@@ -64,6 +65,7 @@ export function OsintPage({ controller, rest, ask, openExternal, host, pending, 
     g.setAutoRotate(settings.autoRotate)
   }, [settings])
   useEffect(() => globeRef.current?.setReducedMotion(reduced), [reduced])
+  const cyber = useCyberLayer({ rest, globeRef, enabled: !!settings.cyber, mask: settings.cyberTypes })
 
   const selectItem = useCallback(
     item => {
@@ -152,6 +154,7 @@ export function OsintPage({ controller, rest, ask, openExternal, host, pending, 
     else if (k === 'r' || k === 'R') g?.resetView()
     else if (k === 'a' || k === 'A') controller.setAutoRotate(!settings.autoRotate)
     else if (k === 'd' || k === 'D') controller.setDither(!settings.dither)
+    else if (k === 'c' || k === 'C') controller.setCyber(!settings.cyber)
     else if (k === '+' || k === '=') g?.zoomBy(0.85)
     else if (k === '-' || k === '_') g?.zoomBy(1 / 0.85)
     else if (k === 'ArrowLeft') g?.rotateBy(-8, 0)
@@ -187,6 +190,13 @@ export function OsintPage({ controller, rest, ask, openExternal, host, pending, 
         ) : (
           <>
             <LayersCard controller={controller} settings={settings} registry={registry} />
+            <CyberCard
+              enabled={!!settings.cyber}
+              mask={settings.cyberTypes}
+              cyber={cyber}
+              onToggle={() => controller.setCyber(!settings.cyber)}
+              onToggleType={id => controller.toggleCyberType(id)}
+            />
             <WatchesCard host={host} rest={rest} version={watchesVersion} onShow={showArea} notify={notify} />
             <SpaceWeatherCard rest={rest} />
             <MarketsCard rest={rest} />

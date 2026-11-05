@@ -317,3 +317,208 @@ void main() {
   gl_FragColor = vec4(uColor * a, a);
 }
 `
+
+// --- Cyber attacks layer: travelling arcs and impact rings (from Hermes Threat Map) -----------------
+
+export const arcVertex = /* glsl */ `
+precision highp float;
+#define PI 3.141592653589793
+in float aT;
+in float aSide;
+in vec3 aSrc;
+in vec3 aDst;
+in vec4 aTiming;   // start (s), duration (s), category, seed
+uniform float uTime;
+uniform vec2 uRes;
+uniform float uWidth;   // core half-width in device pixels
+uniform vec4 uMask;
+uniform float uHighlight;
+out float vT;
+out float vSide;
+out float vLife;
+out float vKind;
+out float vLen;
+out float vHi;
+
+// Written straight-line, without helper functions or ternaries on vectors: ANGLE's D3D backend
+// mistranslated an earlier version (a helper called three times returned the same point).
+void main() {
+  float ang = acos(clamp(dot(aSrc, aDst), -1.0, 1.0));
+  float life = (uTime - aTiming.x) / aTiming.y;
+  int kind = int(aTiming.z + 0.5);
+  float visible = kind == 0 ? uMask.x : kind == 1 ? uMask.y : kind == 2 ? uMask.z : uMask.w;
+  vT = aT;
+  vSide = aSide;
+  vLife = life;
+  vKind = aTiming.z;
+  vLen = ang;
+  // Locals only: reading back a vertex 'out' is not portable across GPU backends (ANGLE/D3D).
+  float hi = float(gl_InstanceID) == uHighlight ? 1.0 : 0.0;
+  vHi = hi;
+  if (life < 0.0 || life > 1.0 || visible < 0.5) {
+    gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+    return;
+  }
+  // Point on the arc and its tangent. u(t) is the great circle from aSrc to aDst (unit length, so
+  // no normalize), r(t) the height above the surface. A same-place attack (one geolocation for
+  // both ends) becomes a short vertical spike.
+  float t = aT;
+  float same = step(ang, 0.006);
+  float s = max(sin(ang), 1e-4);
+  vec3 u = mix((sin((1.0 - t) * ang) * aSrc + sin(t * ang) * aDst) / s, aSrc, same);
+  vec3 du = mix(ang * (-cos((1.0 - t) * ang) * aSrc + cos(t * ang) * aDst) / s, vec3(0.0), same);
+  float lift = mix(0.025 + 0.36 * ang / PI, 0.085, same);
+  float r = 1.002 + lift * sin(PI * t);
+  float dr = lift * PI * cos(PI * t);
+  vec3 p = u * r;
+  vec3 dp = du * r + u * dr;
+  mat4 mvp = projectionMatrix * modelViewMatrix;
+  vec4 cp = mvp * vec4(p, 1.0);
+  vec4 cq = mvp * vec4(p + dp * 0.01, 1.0);
+  // Screen-space direction, without normalize(0) anywhere (no NaN can reach the position).
+  vec2 dir = (cq.xy / cq.w - cp.xy / cp.w) * uRes;
+  float len = length(dir);
+  dir = mix(vec2(1.0, 0.0), dir / max(len, 1e-6), step(1e-5, len));
+  // Not "normal": that name is three's built-in vertex attribute, and shadowing it is not portable.
+  vec2 across = vec2(-dir.y, dir.x);
+  float outer = uWidth * 3.2 * (hi > 0.5 ? 1.6 : 1.0);
+  // A fresh vec4 rather than 'cp.xy += ...': the swizzle compound assignment was dropped by
+  // ANGLE's D3D backend.
+  vec2 offset = across * (aSide * outer * cp.w) * (2.0 / uRes);
+  gl_Position = vec4(cp.x + offset.x, cp.y + offset.y, cp.z, cp.w);
+}
+`
+
+export const arcFragment = /* glsl */ `
+precision highp float;
+uniform vec3 uColors[4];
+uniform float uWidth;
+uniform float uStatic;
+uniform float uDark;
+uniform float uHighlight;
+in float vT;
+in float vSide;
+in float vLife;
+in float vKind;
+in float vLen;
+in float vHi;
+
+void main() {
+  int kind = int(vKind + 0.5);
+  float outer = uWidth * 3.2 * (vHi > 0.5 ? 1.6 : 1.0);
+  float d = abs(vSide) * outer;   // pixels from the centre line
+
+  // Travelling head: reaches the target at life = 1/1.3, then the tail drains into it.
+  float head = vLife * 1.3;
+  float tailLength = 0.34;
+  float x = (head - vT) / tailLength;
+  float trail = (vT <= head && x <= 1.0) ? pow(max(1.0 - x, 0.0), 1.7) : 0.0;
+  float hd = (head - vT) * 22.0;
+  float headGlow = exp(-hd * hd) * step(vT, head + 0.02) * step(head, 1.04);
+  float fadeIn = smoothstep(0.0, 0.08, vLife);
+  float fadeOut = 1.0 - smoothstep(0.78, 1.0, vLife);
+  if (uStatic > 0.5) {
+    trail = 0.75;
+    headGlow = 0.0;
+  }
+  float path = 0.16 * fadeIn * fadeOut;
+
+  // Category pattern along the arc: exploit solid, malware dashed, phishing dotted.
+  float segments = max(7.0, vLen * 42.0);
+  float u = fract(vT * segments);
+  float pattern = kind == 1 ? step(u, 0.62) : kind == 2 ? 1.0 - smoothstep(0.16, 0.3, abs(u - 0.5)) : 1.0;
+
+  float width = uWidth * mix(0.55, 1.25, trail) + headGlow * uWidth * 0.8;
+  float core = 1.0 - smoothstep(width - 0.8, width + 0.8, d);
+  float glow = exp(-d / max(1.0, width * 1.9)) * (trail * 0.55 + headGlow * 0.9);
+  float intensity = core * max(trail, path) * mix(1.0, pattern, step(0.02, 1.0 - headGlow)) + glow;
+  float alpha = clamp(intensity * fadeOut, 0.0, 1.0);
+  if (uHighlight >= 0.0) alpha *= vHi > 0.5 ? 1.5 : 0.28;
+  vec3 color = uColors[kind];
+  color = mix(color, vec3(1.0), headGlow * 0.55 * uDark);
+  if (alpha < 0.003) discard;
+  gl_FragColor = vec4(color * alpha, alpha);
+}
+`
+
+export const impactVertex = /* glsl */ `
+precision highp float;
+in vec3 aPos;
+in vec4 aTiming;  // start, duration, category, role (0 target, 1 source)
+in float aScale;
+uniform float uTime;
+uniform vec4 uMask;
+out vec2 vUv;
+out float vLife;
+out float vKind;
+out float vRole;
+void main() {
+  float life = (uTime - aTiming.x) / aTiming.y;
+  int kind = int(aTiming.z + 0.5);
+  float visible = kind == 0 ? uMask.x : kind == 1 ? uMask.y : kind == 2 ? uMask.z : uMask.w;
+  vLife = life;
+  vKind = aTiming.z;
+  vRole = aTiming.w;
+  vUv = position.xy * 2.0;
+  if (life < 0.0 || life > 1.0 || visible < 0.5) {
+    gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+    return;
+  }
+  vec3 n = normalize(aPos);
+  vec3 up = abs(n.y) > 0.98 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0);
+  vec3 east = normalize(cross(up, n));
+  vec3 north = cross(n, east);
+  float size = aScale * (aTiming.w > 0.5 ? 0.032 : 0.07);
+  vec3 world = n * 1.003 + (east * position.x + north * position.y) * size;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(world, 1.0);
+}
+`
+
+export const impactFragment = /* glsl */ `
+precision highp float;
+uniform vec3 uColors[4];
+uniform float uStatic;
+uniform float uDark;
+in vec2 vUv;
+in float vLife;
+in float vKind;
+in float vRole;
+
+// A "norm" whose level set 1.0 is the category's outline, so one ring formula draws every shape.
+float shapeNorm(vec2 p, int kind) {
+  if (kind == 0) return abs(p.x) + abs(p.y);                         // diamond
+  if (kind == 1) return length(p);                                   // circle
+  if (kind == 2) {                                                   // triangle, point up
+    return max(-p.y * 2.0, max(dot(p, vec2(0.866, 0.5)), dot(p, vec2(-0.866, 0.5))) * 2.0) * 0.82;
+  }
+  return max(abs(p.x), abs(p.y)) * 1.12;                              // square
+}
+
+void main() {
+  int kind = int(vKind + 0.5);
+  float n = shapeNorm(vUv, kind);
+  float aa = fwidth(n) * 1.2;
+  float life = clamp(vLife, 0.0, 1.0);
+  float ease = 1.0 - pow(1.0 - life, 3.0);
+  float alpha;
+  if (uStatic > 0.5) {
+    float outline = 1.0 - smoothstep(0.05, 0.05 + aa, abs(n - 0.45));
+    alpha = (outline * 0.9 + (1.0 - smoothstep(0.18, 0.18 + aa, n)) * 0.7) * (1.0 - smoothstep(0.6, 1.0, life));
+  } else if (vRole > 0.5) {
+    float r = 0.25 + 0.7 * ease;
+    alpha = (1.0 - smoothstep(0.05, 0.05 + aa, abs(n - r))) * (1.0 - life) * 0.75;
+  } else {
+    float r1 = 0.12 + 0.86 * ease;
+    float r2 = 0.86 * (1.0 - pow(1.0 - clamp((life - 0.16) / 0.84, 0.0, 1.0), 3.0));
+    float ring1 = (1.0 - smoothstep(0.035, 0.035 + aa, abs(n - r1))) * (1.0 - life);
+    float ring2 = (1.0 - smoothstep(0.025, 0.025 + aa, abs(n - r2))) * (1.0 - life) * 0.55 * step(0.16, life);
+    float core = (1.0 - smoothstep(0.16, 0.16 + aa, n)) * (1.0 - smoothstep(0.0, 0.55, life));
+    float flash = exp(-n * 5.0) * (1.0 - smoothstep(0.0, 0.25, life)) * 0.8;
+    alpha = ring1 + ring2 + core + flash;
+  }
+  alpha = clamp(alpha, 0.0, 1.0);
+  if (alpha < 0.003) discard;
+  vec3 color = mix(uColors[kind], vec3(1.0), (1.0 - smoothstep(0.0, 0.3, life)) * 0.35 * uDark * (1.0 - vRole));
+  gl_FragColor = vec4(color * alpha, alpha);
+}
+`

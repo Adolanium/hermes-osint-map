@@ -395,6 +395,12 @@ select.hom-input { appearance: auto; padding-right: 6px; }
 .hom-watch-row .hom-btn { height: 24px; min-width: 24px; padding: 0 4px; }
 .hom-watch-row .hom-btn[data-danger="true"] { color: var(--hom-bad); }
 .hom-watch-name { text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ui-text-primary); text-decoration: none; font-weight: 500; }
+.hom-cyber-types { display: flex; flex-wrap: wrap; gap: 4px; }
+.hom-cyber-types .hom-tag { gap: 5px; }
+.hom-cyber-list { display: flex; flex-direction: column; gap: 6px; }
+.hom-cyber-row { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; column-gap: 6px; row-gap: 1px; align-items: center; font-size: 11px; color: var(--ui-text-secondary); animation: hom-rise .35s var(--hom-ease) both; }
+.hom-cyber-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ui-text-primary); }
+.hom-cyber-route { grid-column: 2 / 4; font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hom-watch-alert { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; align-items: center; gap: 6px; font-size: 11px; color: var(--ui-text-secondary); }
 .hom-watch-alert > span:nth-child(2) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (prefers-reduced-motion: reduce) {

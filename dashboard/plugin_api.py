@@ -29,9 +29,13 @@ recon = importlib.import_module(_NAME + ".osintmap.recon")
 cameras = importlib.import_module(_NAME + ".osintmap.cameras")
 areas = importlib.import_module(_NAME + ".osintmap.area")
 watches = importlib.import_module(_NAME + ".osintmap.watch")
+cyberfeed = importlib.import_module(_NAME + ".osintmap.cyberfeed")
+checkpoint = importlib.import_module(_NAME + ".osintmap.checkpoint")
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+# The Cyber attacks layer: one shared upstream stream, opened only while a page polls /cyber/events.
+cyber_hub = cyberfeed.FeedHub(checkpoint.open_feed)
 
 
 def _answer(work):
@@ -148,3 +152,28 @@ def watch_prompt(watch_id: str, label: str, lat: str | None = None, lon: str | N
         label_clean = (label or where.describe()).replace('"', "").strip()[:60]
         return {"prompt": watches.job_prompt(watch_id, clean, label_clean), "label": label_clean}
     return _answer(work)
+
+
+@router.get("/cyber/events")
+def cyber_events(after: str | None = None, limit: str | None = None):
+    """Attacks newer than ``after`` from the Cyber attacks layer. Polling keeps the stream open; it
+    closes by itself shortly after the last poll."""
+    def work():
+        try:
+            cursor = max(0, int(after or 0))
+            count = max(1, min(500, int(limit or 500)))
+        except ValueError:
+            raise net.UpstreamError(400, "after and limit must be whole numbers.") from None
+        return cyber_hub.poll(cursor, count)
+    return _answer(work)
+
+
+@router.post("/cyber/stop")
+def cyber_stop():
+    cyber_hub.stop()
+    return _answer(cyber_hub.status)
+
+
+@router.get("/cyber/top")
+def cyber_top():
+    return _answer(checkpoint.top_stats)

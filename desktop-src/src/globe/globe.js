@@ -2,6 +2,7 @@
 // line for the selected moving object, country heat, and picking. It knows nothing about React or
 // the plugin SDK; the page drives it through the returned handle and must call dispose().
 import {
+  AdditiveBlending,
   BufferAttribute,
   BufferGeometry,
   DataTexture,
@@ -25,11 +26,16 @@ import {
   WebGLRenderer
 } from 'three'
 import { countryRaster, indexAt, RASTER_HEIGHT, RASTER_WIDTH } from '../geo/world.js'
+import { CATEGORY_INDEX } from '../data/cyber.js'
 import {
+  arcFragment,
+  arcVertex,
   backdropFragment,
   backdropVertex,
   earthFragment,
   earthVertex,
+  impactFragment,
+  impactVertex,
   markerFragment,
   markerVertex,
   pathFragment,
@@ -39,6 +45,9 @@ import {
 export const MARKER_POOL = 8192
 export const MAX_LAYERS = 12
 const PATH_POINTS = 256
+const ARC_POOL = 320
+const ARC_SEGMENTS = 64
+const IMPACT_POOL = 640
 const FOV = 30
 const DEG = Math.PI / 180
 
@@ -214,6 +223,94 @@ export function createGlobe(canvas, options) {
   path.renderOrder = 2
   scene.add(path)
 
+  // --- Cyber attacks: travelling arcs and impact rings --------------------------------------------
+  const arcGeometry = new InstancedBufferGeometry()
+  {
+    const verts = (ARC_SEGMENTS + 1) * 2
+    const t = new Float32Array(verts)
+    const sideArr = new Float32Array(verts)
+    for (let i = 0; i <= ARC_SEGMENTS; i++) {
+      t[i * 2] = t[i * 2 + 1] = i / ARC_SEGMENTS
+      sideArr[i * 2] = -1
+      sideArr[i * 2 + 1] = 1
+    }
+    const index = []
+    for (let i = 0; i < ARC_SEGMENTS; i++) {
+      const a = i * 2
+      index.push(a, a + 1, a + 2, a + 1, a + 3, a + 2)
+    }
+    arcGeometry.setIndex(index)
+    arcGeometry.setAttribute('position', new BufferAttribute(new Float32Array(verts * 3), 3))
+    arcGeometry.setAttribute('aT', new BufferAttribute(t, 1))
+    arcGeometry.setAttribute('aSide', new BufferAttribute(sideArr, 1))
+  }
+  const arcSrc = new InstancedBufferAttribute(new Float32Array(ARC_POOL * 3), 3)
+  const arcDst = new InstancedBufferAttribute(new Float32Array(ARC_POOL * 3), 3)
+  const arcTiming = new InstancedBufferAttribute(new Float32Array(ARC_POOL * 4).fill(-1e6), 4)
+  arcGeometry.setAttribute('aSrc', arcSrc)
+  arcGeometry.setAttribute('aDst', arcDst)
+  arcGeometry.setAttribute('aTiming', arcTiming)
+  arcGeometry.instanceCount = ARC_POOL
+  const cyberColors = [new Vector3(1, 1, 1), new Vector3(1, 1, 1), new Vector3(1, 1, 1), new Vector3(1, 1, 1)]
+  const cyberMask = { value: [1, 1, 1, 1] }
+  const arcUniforms = {
+    uTime: { value: 0 },
+    uRes: { value: size },
+    uWidth: { value: 1.2 },
+    uMask: cyberMask,
+    uColors: { value: cyberColors },
+    uStatic: { value: 0 },
+    uDark: { value: 1 },
+    uHighlight: { value: -1 }
+  }
+  const arcMaterial = new ShaderMaterial({
+    vertexShader: arcVertex,
+    fragmentShader: arcFragment,
+    uniforms: arcUniforms,
+    transparent: true,
+    depthWrite: false,
+    depthTest: true,
+    side: DoubleSide
+  })
+  const arcs = new Mesh(arcGeometry, arcMaterial)
+  arcs.frustumCulled = false
+  arcs.renderOrder = 2
+  scene.add(arcs)
+
+  const impactGeometry = new InstancedBufferGeometry()
+  {
+    const quad = new PlaneGeometry(1, 1)
+    impactGeometry.index = quad.index
+    impactGeometry.setAttribute('position', quad.getAttribute('position'))
+  }
+  const impactPos = new InstancedBufferAttribute(new Float32Array(IMPACT_POOL * 3), 3)
+  const impactTiming = new InstancedBufferAttribute(new Float32Array(IMPACT_POOL * 4).fill(-1e6), 4)
+  const impactScale = new InstancedBufferAttribute(new Float32Array(IMPACT_POOL).fill(1), 1)
+  impactGeometry.setAttribute('aPos', impactPos)
+  impactGeometry.setAttribute('aTiming', impactTiming)
+  impactGeometry.setAttribute('aScale', impactScale)
+  impactGeometry.instanceCount = IMPACT_POOL
+  const impactMaterial = new ShaderMaterial({
+    vertexShader: impactVertex,
+    fragmentShader: impactFragment,
+    uniforms: { uTime: arcUniforms.uTime, uMask: cyberMask, uColors: { value: cyberColors }, uStatic: arcUniforms.uStatic, uDark: arcUniforms.uDark },
+    side: DoubleSide,
+    transparent: true,
+    depthWrite: false,
+    depthTest: true,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2
+  })
+  const impacts = new Mesh(impactGeometry, impactMaterial)
+  impacts.frustumCulled = false
+  impacts.renderOrder = 2
+  scene.add(impacts)
+  const arcSlots = new Array(ARC_POOL).fill(null) // { eventId, start, dur }
+  let arcNext = 0
+  const impactSlots = new Array(IMPACT_POOL).fill(null) // { start, dur }
+  let impactNext = 0
+
   // --- State ----------------------------------------------------------------------------------
   let lastNow = null
   let clock = 0 // seconds since start (drives pulses)
@@ -254,6 +351,7 @@ export function createGlobe(canvas, options) {
     earthUniforms.uCell.value = cell
     backdropUniforms.uCell.value = cell
     markerUniforms.uPixelRatio.value = pixelRatio
+    arcUniforms.uWidth.value = 1.5 * pixelRatio
     wake()
   }
   const minDist = () => 1.035 // close enough to separate individual cameras in a city
@@ -285,6 +383,77 @@ export function createGlobe(canvas, options) {
     earthUniforms.uDark.value = dark
     backdropUniforms.uDark.value = dark
     markerUniforms.uDark.value = dark
+    ;(p.cyber ?? []).forEach((c, i) => {
+      if (i < 4) cyberColors[i].set(c[0], c[1], c[2])
+    })
+    arcUniforms.uDark.value = dark
+    // Light glows add up on dark backgrounds; on light ones additive light would vanish.
+    for (const m of [arcMaterial, impactMaterial]) {
+      m.blending = p.dark ? AdditiveBlending : NormalBlending
+      m.premultipliedAlpha = true
+      m.needsUpdate = true
+    }
+    wake()
+  }
+
+  // --- Cyber attacks ----------------------------------------------------------------------------
+  const tmpArcA = new Vector3()
+  const tmpArcB = new Vector3()
+  const tmpArcC = new Vector3()
+
+  function launchAttack(event) {
+    if (event.src.lat === null || event.dst.lat === null) return
+    const kind = CATEGORY_INDEX[event.type] ?? 3
+    const a = toVector(event.src.lat, event.src.lon, tmpArcA)
+    const b = toVector(event.dst.lat, event.dst.lon, tmpArcB)
+    let ang = Math.acos(Math.max(-1, Math.min(1, a.dot(b))))
+    // Same place at both ends (domestic attacks often share one centroid): draw a short local hop.
+    const arcEnd = ang < 0.006 ? toVector(event.dst.lat + 2.2, event.dst.lon + 3.2, tmpArcC) : b
+    if (ang < 0.006) ang = Math.acos(Math.max(-1, Math.min(1, a.dot(arcEnd))))
+    const dur = reducedMotion ? 3.2 : 1.5 + 2.1 * (ang / Math.PI)
+    const start = clock
+    const slot = arcNext
+    arcNext = (arcNext + 1) % ARC_POOL
+    arcSrc.setXYZ(slot, a.x, a.y, a.z)
+    arcDst.setXYZ(slot, arcEnd.x, arcEnd.y, arcEnd.z)
+    arcTiming.setXYZW(slot, start, dur, kind, Math.random())
+    arcSrc.needsUpdate = arcDst.needsUpdate = arcTiming.needsUpdate = true
+    arcSlots[slot] = { eventId: event.id, start, dur }
+    const scale = 0.8 + Math.min(1.2, Math.log10(event.count + 1) * 0.6)
+    addImpact(a, kind, start, reducedMotion ? 3.2 : 1.2, 1, 0.9)
+    addImpact(b, kind, reducedMotion ? start : start + dur / 1.3, reducedMotion ? 3.2 : 2.0, 0, scale)
+    wake()
+  }
+
+  /** A repeat of an attack already on screen: pulse its target again instead of a new arc. */
+  function pulseAttack(event) {
+    if (event.dst.lat === null) return
+    addImpact(toVector(event.dst.lat, event.dst.lon, tmpArcB), CATEGORY_INDEX[event.type] ?? 3, clock, reducedMotion ? 2 : 1.4, 0, 0.7)
+    wake()
+  }
+
+  function addImpact(v, kind, start, dur, role, scale) {
+    const slot = impactNext
+    impactNext = (impactNext + 1) % IMPACT_POOL
+    impactPos.setXYZ(slot, v.x, v.y, v.z)
+    impactTiming.setXYZW(slot, start, dur, kind, role)
+    impactScale.setX(slot, scale)
+    impactPos.needsUpdate = impactTiming.needsUpdate = impactScale.needsUpdate = true
+    impactSlots[slot] = { start, dur }
+  }
+
+  function attacksActive() {
+    for (const slot of arcSlots) if (slot && clock < slot.start + slot.dur) return true
+    for (const slot of impactSlots) if (slot && clock < slot.start + slot.dur) return true
+    return false
+  }
+
+  function clearAttacks() {
+    arcTiming.array.fill(-1e6)
+    impactTiming.array.fill(-1e6)
+    arcTiming.needsUpdate = impactTiming.needsUpdate = true
+    arcSlots.fill(null)
+    impactSlots.fill(null)
     wake()
   }
 
@@ -584,6 +753,7 @@ export function createGlobe(canvas, options) {
     applyCamera()
 
     markerUniforms.uTime.value = clock
+    arcUniforms.uTime.value = clock
     // Markers grow a little as you zoom in, so dense areas separate.
     markerUniforms.uZoom.value = Math.min(1.7, Math.max(0.85, Math.sqrt(fitDist / view.dist)))
     backdropUniforms.uTime.value = now / 1000
@@ -618,7 +788,7 @@ export function createGlobe(canvas, options) {
     if (autoRotate && !reducedMotion) return false
     // Pulses on newly arrived markers need frames for 2.4 s.
     for (const t of births.values()) if (clock - t < 2.5) return false
-    return true
+    return !attacksActive()
   }
 
   const loop = options.loop(frame, { fps: 60, idleWhen: idle })
@@ -633,6 +803,14 @@ export function createGlobe(canvas, options) {
     setPalette,
     setMarkers,
     setPath,
+    launchAttack,
+    pulseAttack,
+    clearAttacks,
+    /** Which attack categories draw (exploit, malware, phishing, other). */
+    setAttackMask(next) {
+      cyberMask.value = [0, 1, 2, 3].map(i => (next[i] === false ? 0 : 1))
+      wake()
+    },
     wake,
     flyTo,
     zoomBy,
@@ -687,12 +865,14 @@ export function createGlobe(canvas, options) {
     setReducedMotion(value) {
       reducedMotion = value
       markerUniforms.uStatic.value = value ? 1 : 0
+      arcUniforms.uStatic.value = value ? 1 : 0
       backdropUniforms.uMotion.value = value ? 0 : 1
       wake()
     },
     stats() {
       return {
         markers: markerGeometry.instanceCount,
+        arcsLive: arcSlots.filter(slot => slot && clock <= slot.start + slot.dur).length,
         view: { ...view },
         drawCalls: renderer.info.render.calls,
         triangles: renderer.info.render.triangles,
@@ -714,7 +894,7 @@ export function createGlobe(canvas, options) {
       canvas.removeEventListener('dblclick', onDoubleClick)
       canvas.removeEventListener('webglcontextlost', onContextLost)
       canvas.removeEventListener('webglcontextrestored', onContextRestored)
-      for (const obj of [backdrop, earth, markers, path]) {
+      for (const obj of [backdrop, earth, markers, path, arcs, impacts]) {
         obj.geometry.dispose()
         obj.material.dispose()
       }

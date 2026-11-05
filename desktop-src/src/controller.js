@@ -15,7 +15,9 @@ const DEFAULTS = {
   layers: Object.fromEntries(LAYERS.map(l => [l.id, l.id !== 'weather'])),
   dither: true,
   autoRotate: true,
-  alerts: true
+  alerts: true,
+  cyber: false,
+  cyberTypes: {}
 }
 
 /**
@@ -290,6 +292,11 @@ export function createController({ atom, rest, schedule, storage, notify }) {
     setDither: value => update({ dither: value }),
     setAutoRotate: value => update({ autoRotate: value }),
     setAlerts: value => update({ alerts: value }),
+    setCyber: value => update({ cyber: value }),
+    toggleCyberType(id) {
+      const types = settings.get().cyberTypes ?? {}
+      update({ cyberTypes: { ...types, [id]: types[id] === false } })
+    },
     refresh(id) {
       if (id) slot(id).next = 0
       else for (const d of data.values()) d.next = 0

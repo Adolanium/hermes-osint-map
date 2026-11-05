@@ -45,9 +45,11 @@ Every source is public and needs no account. The page's "Brief me", "Ask Hermes"
 | Satellites | ✚ plus | CelesTrak elements, positions computed live (SGP4) | 1 s |
 | Traffic cameras | ▢ frame | Transport for London JamCams and Singapore LTA (data.gov.sg), official open data | stills every minute |
 | Chokepoints | ○ ring | Curated straits and canals | static |
+| Cyber attacks (opt-in) | arcs: ◆ exploit, ● malware, ▲ phishing | Check Point ThreatCloud live map feed (unofficial) | live |
 
 | | |
 | --- | --- |
+| **Watch attacks fly**<br />Turn on Cyber attacks and live detections from Check Point's public threat map arc from source to target, with the rate, today's total and the latest attacks in the rail. | **Pin it to chat**<br />Answers about a place end with a live map card you can open or watch. |
 | **Follow what moves**<br />Click a satellite to draw its next orbit, an aircraft to see the track it flew while you watched, or a traffic camera for its latest still. | **Drill into a country**<br />A dossier with World Bank facts, everything on the map there, and recent headlines. |
 | **Read the room**<br />NOAA space weather, markets, a layer-health panel, and a feed of events, world headlines and alerts. | **Look things up**<br />DNS, RDAP/WHOIS, TLS certificates, security headers, CT subdomains, CVEs with CISA KEV status, IP, GitHub and MAC lookups. |
 
@@ -121,7 +123,7 @@ The markets panel shows crypto out of the box. Add a free [Twelve Data](https://
 
 ### Keys
 
-`1`–`9` toggle layers, `/` opens recon, `R` resets the view, `A` toggles spin, `D` toggles dithering, arrows rotate, `+`/`-` zoom, `Esc` closes a panel.
+`1`–`9` toggle layers, `C` toggles cyber attacks, `/` opens recon, `R` resets the view, `A` toggles spin, `D` toggles dithering, arrows rotate, `+`/`-` zoom, `Esc` closes a panel.
 
 ### Test
 
@@ -146,6 +148,7 @@ Hermes gateway  →  public data sources (fixed hosts, cached)  →  the globe, 
 
 - **What leaves your machine.** Requests to the public sources below, identified as `hermes-osint-map`. Recon lookups send the domain, IP, CVE, GitHub name or MAC prefix you enter to the matching public service. TLS and header lookups connect to the host you name.
 - **Who it talks to.** USGS, NASA EONET, GDACS, the National Weather Service, GDELT, adsb.lol, CelesTrak, NOAA SWPC, Transport for London (api.tfl.gov.uk and its JamCams image bucket), data.gov.sg (Singapore traffic images), the World Bank, the BBC/Al Jazeera/DW/Guardian/France 24 RSS feeds, CoinGecko, and Twelve Data if you add a key. Recon uses Google Public DNS, rdap.org, crt.sh, CIRCL CVE, CISA KEV, ipwho.is, GitHub and MacVendors. Only the first three octets of a MAC address are sent.
+- **Cyber attacks (off until you turn it on).** The layer reads `threatmap-api.checkpoint.com`, the feed behind Check Point's public map at threatmap.checkpoint.com. It is not a documented or offered API. The gateway opens one stream while a page shows the layer and closes it about 45 seconds after the page stops asking. Nothing about you is sent beyond the request itself.
 - **Your key.** The optional Twelve Data key is sent to Twelve Data in a request header, never in a URL, and never logged or echoed in errors.
 - **Watches.** Each watch is a Hermes scheduled job you create and can remove. Every check is one short model call with your default model, plus the same public-source requests the page makes. A watch's state (its area, rules, the last 2,000 event ids it has seen and its last 20 alerts) lives in the plugin's own Hermes state file under `plugin-data`. Alerts go only to the destination you picked.
 - **Nothing else.** No shell commands, no processes of its own, no telemetry. The page remembers your layer choices in Hermes Desktop's plugin storage.
@@ -169,10 +172,11 @@ The plugin depends only on `httpx` and `fastapi`, which Hermes already ships.
 - Without a Twelve Data key, the markets panel shows crypto only.
 - A watch checks only as often as its schedule, every 15 minutes at the fastest. It is an early heads-up, not an emergency alert system.
 - Map cards render in Hermes Desktop only.
+- Cyber attacks come from an unofficial feed that Check Point can change or switch off without notice. The layer then shows the error and the rest of the map keeps working. Locations are geolocated IPs, often a country centroid, and show detections Check Point's sensors saw, not every attack in the world.
 
 ## Data and credits
 
-Earthquakes: USGS (public domain). Natural events: NASA EONET (public domain). Disaster alerts: GDACS. Severe weather: National Weather Service (public domain). Incidents: The GDELT Project. Aircraft: adsb.lol (ODbL). Satellites: CelesTrak. Traffic cameras: Powered by TfL Open Data (contains OS data © Crown copyright and database rights); Singapore traffic images from data.gov.sg under the Singapore Open Data Licence v1.0. Space weather: NOAA SWPC (public domain). Country facts: World Bank (CC BY 4.0). Headlines: links and titles from public RSS feeds, plus the GDELT 2.0 article search when a query is given. Borders: Natural Earth (public domain). Rendering: three.js (MIT); orbits: satellite.js (MIT).
+Earthquakes: USGS (public domain). Natural events: NASA EONET (public domain). Disaster alerts: GDACS. Severe weather: National Weather Service (public domain). Incidents: The GDELT Project. Aircraft: adsb.lol (ODbL). Satellites: CelesTrak. Traffic cameras: Powered by TfL Open Data (contains OS data © Crown copyright and database rights); Singapore traffic images from data.gov.sg under the Singapore Open Data Licence v1.0. Space weather: NOAA SWPC (public domain). Country facts: World Bank (CC BY 4.0). Headlines: links and titles from public RSS feeds, plus the GDELT 2.0 article search when a query is given. Borders: Natural Earth (public domain). Cyber attacks: Check Point ThreatCloud live threat map (threatmap.checkpoint.com). Rendering: three.js (MIT); orbits: satellite.js (MIT).
 
 <br />
 

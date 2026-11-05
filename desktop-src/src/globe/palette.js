@@ -1,5 +1,6 @@
 // Derives the globe's colours from the active Hermes theme's CSS variables, so the globe reskins
 // with every theme. No colour here is hardcoded: each one is a theme variable or a mix of two.
+import { CATEGORIES } from '../data/cyber.js'
 import { LAYERS } from '../data/layers.js'
 
 /** Resolve CSS colours (any syntax the browser accepts: hex, rgb, oklch, color-mix…) to sRGB 0..1. */
@@ -49,6 +50,10 @@ export function buildPalette(resolver) {
     // On light themes pull layer colours slightly toward the ink so small markers keep contrast.
     return dark ? color : mix(color, text, 0.18)
   })
+  const cyber = CATEGORIES.map(c => {
+    const color = read(c.cssVar, c.fallbackVar) ?? accent
+    return dark ? color : mix(color, text, 0.18)
+  })
   return {
     dark,
     ocean: mix(bg, text, dark ? 0.035 : 0.045),
@@ -60,6 +65,7 @@ export function buildPalette(resolver) {
     rim: mix(accent, text, dark ? 0.18 : 0.05),
     star: mix(bg, text, 0.85),
     ink: text,
-    layers
+    layers,
+    cyber
   }
 }
