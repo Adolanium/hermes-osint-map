@@ -41,6 +41,8 @@ SOURCE_NAMES = {"tfl": "TfL", "sg": "data.gov.sg", "ca": "Caltrans", "hk": "the 
 MAX_CAMERAS = 10_000
 MAX_FRAME_BYTES = 1_500_000
 FRAME_TTL = 60.0
+MAX_CLIP_BYTES = 3_000_000
+CLIP_TTL = 120.0  # TfL re-shoots each JamCam clip every few minutes
 IMAGE_TYPES = ("image/jpeg", "image/png", "image/webp")
 
 ATTRIBUTION = {
@@ -58,10 +60,13 @@ def caltrans_url(district: int) -> str:
 _DIRECTIONS = {"north", "south", "east", "west", "north east", "north west", "south east", "south west",
                "northeast", "northwest", "southeast", "southwest", "n", "s", "e", "w", "ne", "nw", "se", "sw"}
 
-# Image URL for every camera id the layer has produced, so frames can be served by id.
+# Image URL for every camera id the layer has produced, so frames can be served by id; and the
+# video clip URL for cameras that publish one (TfL JamCams), so clips can be served by id too.
 _urls: dict[str, tuple[str, str]] = {}
+_videos: dict[str, str] = {}
 _urls_lock = threading.Lock()
 _frames = TTLCache(FRAME_TTL, size=128)
+_clips = TTLCache(CLIP_TTL, size=48)
 
 
 def _remember(found: list[dict]) -> None:
@@ -69,9 +74,15 @@ def _remember(found: list[dict]) -> None:
         for entry in found:
             url, source = entry.pop("_image"), entry.pop("_source")
             _urls[entry["id"]] = (url, source)
+            video = entry.pop("_video", None)
+            if video:
+                _videos[entry["id"]] = video
         if len(_urls) > MAX_CAMERAS:  # bounded: keep the newest entries only
             for key in list(_urls)[: len(_urls) - MAX_CAMERAS]:
                 del _urls[key]
+        if len(_videos) > MAX_CAMERAS:
+            for key in list(_videos)[: len(_videos) - MAX_CAMERAS]:
+                del _videos[key]
 
 
 def _image_allowed(url: Any) -> bool:
@@ -103,7 +114,12 @@ def parse_tfl(raw: Any) -> list[dict]:
             severity=0.2, country="GB", url="https://tfl.gov.uk/traffic/status/",
             rows=[("Operator", "Transport for London"), ("View", view), ("Camera", key)],
         )
-        out.append({**found, "_image": image, "_source": "tfl"})
+        video = props.get("videoUrl")
+        if _image_allowed(video) and str(video).endswith(".mp4"):
+            found["video"] = True  # the page plays this camera's clip instead of its still
+            out.append({**found, "_image": image, "_source": "tfl", "_video": video})
+        else:
+            out.append({**found, "_image": image, "_source": "tfl"})
     return out
 
 
@@ -234,6 +250,32 @@ def frame(camera_id: str, fetch: Callable[..., Any] = http.get) -> dict:
         }
 
     return _frames.get_or_load(camera_id, load)
+
+
+def clip(camera_id: str, fetch: Callable[..., Any] = http.get) -> dict:
+    """``GET /camera/{id}/clip``: a TfL JamCam's latest video clip (about ten seconds, MP4) as a data
+    URL, cached for two minutes. Only ids the camera layer listed with a clip are served."""
+    with _urls_lock:
+        url = _videos.get(camera_id)
+    if url is None:
+        raise UpstreamError(404, "This camera has no video clip.")
+    if not _image_allowed(url):  # defence in depth: the map only ever holds allowed URLs
+        raise UpstreamError(403, "Refusing to fetch a clip from that host.")
+
+    def load() -> dict:
+        response = fetch(url, source="TfL", timeout=20.0, max_bytes=MAX_CLIP_BYTES, headers={"Accept": "video/mp4"})
+        if response.body[4:8] != b"ftyp":
+            raise UpstreamError(502, "The camera did not return a video clip.")
+        modified = response.headers.get("last-modified")
+        return {
+            "id": camera_id,
+            "video": f"data:video/mp4;base64,{base64.b64encode(response.body).decode('ascii')}",
+            "captured": _http_date_ms(modified),
+            "fetched": http.now_ms(),
+            "attribution": ATTRIBUTION["tfl"],
+        }
+
+    return _clips.get_or_load(camera_id, load)
 
 
 def sniff_image(body: bytes) -> str | None:

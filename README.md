@@ -43,7 +43,7 @@ Every source is public and needs no account. The page's "Brief me", "Ask Hermes"
 | News incidents | ⬢ hexagon | GDELT events, last 3 hours | 15 min |
 | Aircraft | ➤ dart | adsb.lol: military worldwide, all traffic near the view when zoomed in | 15 s |
 | Satellites | ✚ plus | CelesTrak elements, positions computed live (SGP4) | 1 s |
-| Traffic cameras | ▢ frame | About 5,000 official open-data cameras: Transport for London JamCams, Caltrans (California highways), Hong Kong Transport Department, Singapore LTA (data.gov.sg) | stills every 1–2 minutes |
+| Traffic cameras | ▢ frame | About 5,000 official open-data cameras: Transport for London JamCams (live video clips), Caltrans (California highways), Hong Kong Transport Department, Singapore LTA (data.gov.sg) | London: a new 10 s video clip every few minutes; elsewhere stills every 1–2 minutes |
 | Chokepoints | ○ ring | Curated straits and canals | static |
 | Cyber attacks (opt-in) | arcs: ◆ exploit, ● malware, ▲ phishing | Check Point ThreatCloud live map feed (unofficial) | live |
 
@@ -83,7 +83,7 @@ Ask for a brief, a region or "show me the Red Sea", and Hermes moves the map whi
 
 - **Tour** (`T`) flies through what matters right now: the strongest quake of the last day, the worst disaster alert, a natural event, the most-attacked country, a live traffic camera and the ISS, with a caption and a progress bar at each stop. Every stop comes from the live layers.
 - **Camera wall.** Click a city's camera cluster and its nine nearest working cameras open as a live grid, each still refreshing every minute. Full screen turns the grid into a control-room view.
-- **Big camera view.** Click any wall tile, or **Expand** on a camera's panel, to open its still large with when it was taken and a countdown to the next one. `←` and `→` step to the next nearest camera (skipping ones that are off), and **Show on map** flies there.
+- **Big camera view.** Click any wall tile, or **Expand** on a camera's panel, to open its still (in London, its video clip) large with when it was taken and a countdown to the next one. `←` and `→` step to the next nearest camera (skipping ones that are off), and **Show on map** flies there.
 - **Day and night** (`N`) shades the globe from the real sun position.
 - **Vision** (`V`) cycles night vision, thermal and CRT. Each remaps the globe's colours and adds an overlay.
 - Cyber attacks warm the countries they land in, and significant recent earthquakes keep rippling.
@@ -181,7 +181,7 @@ The plugin depends only on `httpx` and `fastapi`, which Hermes already ships.
 
 - Aircraft come from volunteer ADS-B receivers: coverage is thin over oceans and some regions, and military traffic only shows when it broadcasts.
 - Severe weather covers the United States only (NWS). Alerts without a mapped area are skipped.
-- Traffic cameras cover London, California's state highways, Hong Kong and Singapore. All four publish stills, not live video, refreshed every one to two minutes. Caltrans's server is slow, so the first load of the camera layer takes about half a minute; after that it is cached for an hour.
+- Traffic cameras cover London, California's state highways, Hong Kong and Singapore. London's JamCams publish a short video clip (about ten seconds, 352×288) that TfL re-shoots every few minutes, which the page loops; the other three publish stills only, refreshed every one to two minutes. Caltrans lists live streams too, but its stream server refuses requests from outside its own site. Caltrans's server is slow, so the first load of the camera layer takes about half a minute; after that it is cached for an hour.
 - GDELT incidents are machine-coded from news. Locations are often a city or country centroid, and labels like "Fight" describe the coverage, not a verified event. Titles echo the article's own headline when its URL slug is readable, and the place name when it is not.
 - crt.sh, behind subdomain lookups, is often slow or down. Those lookups then fail with a clear error.
 - Without a Twelve Data key, the markets panel shows crypto only.

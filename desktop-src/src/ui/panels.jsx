@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Codicon, GlyphSpinner, Switch, Tip } from '@hermes/plugin-sdk'
 import { LAYER_INDEX, LAYERS, layerOf } from '../data/layers.js'
 import { periodMinutes } from '../data/satellites.js'
+import { ClipVideo, useCameraClip } from './clip.jsx'
 import { countryAt, countryByCode, countryName } from '../geo/world.js'
 import { age, fmt, fmtCompact, layerVar, Shape, useNow } from './kit.jsx'
 
@@ -359,7 +360,7 @@ export function ItemPanel({ item, controller, onClose, onCountry, onAsk, onWatch
       </div>
       <div className="hom-detail-title">{item.title}</div>
       {item.subtitle ? <div className="hom-soft">{item.subtitle}</div> : null}
-      {item.layer === 'cameras' ? <CameraFrame rest={controller.rest} id={item.id} title={item.title} now={now} onExpand={onExpandCamera ? () => onExpandCamera(item) : null} /> : null}
+      {item.layer === 'cameras' ? <CameraFrame rest={controller.rest} item={item} id={item.id} title={item.title} now={now} onExpand={onExpandCamera ? () => onExpandCamera(item) : null} /> : null}
       <dl className="hom-facts">
         {item.time && item.layer !== 'satellites' ? (
           <>
@@ -414,21 +415,24 @@ export function ItemPanel({ item, controller, onClose, onCountry, onAsk, onWatch
 
 /** A camera's latest still, refreshed every minute while shown. The backend fetches it by camera
  *  id from the operator's image host and hands back a data URL, so the page loads nothing remote. */
-function CameraFrame({ rest, id, title, now, onExpand }) {
+function CameraFrame({ rest, item, id, title, now, onExpand }) {
   const { data, error, loading } = useRemote(rest, `/camera/${encodeURIComponent(id)}`, 60_000)
-  const captured = data?.captured ?? null
+  const clip = useCameraClip(rest, item)
+  const captured = (clip.src ? clip.data?.captured : null) ?? data?.captured ?? null
+  const media = clip.src ? <ClipVideo className="hom-camera-img" src={clip.src} title={title} /> : data?.image ? <img className="hom-camera-img" src={data.image} alt={`Latest image from ${title}`} /> : null
   return (
     <figure className="hom-camera">
-      {data?.image ? (
+      {media ? (
         onExpand ? (
           <button type="button" className="hom-camera-open" onClick={onExpand} aria-label={`Open ${title} large`}>
-            <img className="hom-camera-img" src={data.image} alt={`Latest image from ${title}`} />
+            {media}
+            {clip.src ? <span className="hom-camera-badge hom-mono">● VIDEO</span> : null}
             <span className="hom-camera-expand">
               <Codicon name="screen-full" /> Expand
             </span>
           </button>
         ) : (
-          <img className="hom-camera-img" src={data.image} alt={`Latest image from ${title}`} />
+          media
         )
       ) : loading ? (
         <div className="hom-skeleton hom-camera-img" />
@@ -437,7 +441,9 @@ function CameraFrame({ rest, id, title, now, onExpand }) {
       )}
       {data ? (
         <figcaption className="hom-caption">
-          {captured ? `Captured ${age(captured, now)} ago · ` : ''}refreshes every minute
+          {clip.src
+            ? `Video clip${captured ? ` captured ${age(captured, now)} ago` : ''} · a new clip every few minutes`
+            : `${captured ? `Captured ${age(captured, now)} ago · ` : ''}refreshes every minute`}
           <br />
           {data.attribution}
         </figcaption>

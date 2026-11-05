@@ -81,6 +81,12 @@ def country(code: str):
     return _answer(lambda: panels.country(code))
 
 
+@router.get("/camera/{camera_id}/clip")
+def camera_clip(camera_id: str):
+    """Latest video clip of a camera that publishes one (TfL JamCams), by id only."""
+    return _answer(lambda: cameras.clip(camera_id))
+
+
 @router.get("/camera/{camera_id}")
 def camera_frame(camera_id: str):
     """Latest still of a camera the cameras layer listed (by id only, never by URL)."""

@@ -5,6 +5,7 @@ import { Codicon } from '@hermes/plugin-sdk'
 import { useRemote } from './panels.jsx'
 import { age, useNow } from './kit.jsx'
 import { looksUnavailable } from './wall.jsx'
+import { CLIP_REFRESH_MS, ClipVideo, useCameraClip } from './clip.jsx'
 
 export { nearestCameras } from '../data/cameras.js'
 
@@ -17,6 +18,8 @@ export function CameraViewer({ rest, viewer, setViewer, onDetails }) {
   const data = remote.data?.id === item?.id ? remote.data : null
   const { error } = remote
   const loading = remote.loading || (!data && !error)
+  const clip = useCameraClip(rest, item)
+  const refreshMs = clip.src ? CLIP_REFRESH_MS : REFRESH_MS
   const now = useNow(1000)
   const dialogRef = useRef(null)
   // The still is re-requested every REFRESH_MS from when this camera was opened (useRemote's interval).
@@ -44,7 +47,8 @@ export function CameraViewer({ rest, viewer, setViewer, onDetails }) {
 
   useEffect(() => dialogRef.current?.focus(), [])
   if (!item) return null
-  const next = Math.min(60, Math.max(1, Math.ceil((REFRESH_MS - ((now - openedAt) % REFRESH_MS)) / 1000)))
+  const next = Math.min(refreshMs / 1000, Math.max(1, Math.ceil((refreshMs - ((now - openedAt) % refreshMs)) / 1000)))
+  const captured = (clip.src ? clip.data?.captured : null) ?? data?.captured
   const [operator, ...rest2] = (item.subtitle ?? '').split(' · ')
 
   return (
@@ -67,13 +71,15 @@ export function CameraViewer({ rest, viewer, setViewer, onDetails }) {
     >
       <figure className="hom-viewer-frame hom-panel">
         <div className="hom-viewer-img">
-          {data?.image ? (
+          {clip.src ? (
+            <ClipVideo key={clip.src} src={clip.src} title={item.title} fit="contain" />
+          ) : data?.image ? (
             <img key={data.image.length + item.id} src={data.image} alt={`Latest image from ${item.title}`} />
           ) : (
             <div className={loading ? 'hom-skeleton' : 'hom-camera-empty'}>{loading ? null : error ? `No image right now: ${error}` : 'No image'}</div>
           )}
           <span className="hom-viewer-live hom-mono">
-            <span className="hom-dot hom-tone-live" data-pulse={!!data?.image} /> LIVE STILL
+            <span className="hom-dot hom-tone-live" data-pulse={!!(clip.src || data?.image)} /> {clip.src ? 'LIVE VIDEO' : 'LIVE STILL'}
             {viewer.items.length > 1 ? ` · ${viewer.index + 1} / ${viewer.items.length}` : ''}
           </span>
           {viewer.items.length > 1 ? (
@@ -93,8 +99,8 @@ export function CameraViewer({ rest, viewer, setViewer, onDetails }) {
             <span className="hom-soft">{[operator, ...rest2].filter(Boolean).join(' · ')}</span>
           </div>
           <div className="hom-viewer-meta hom-num">
-            {data?.captured ? <span>Captured {age(data.captured, now)} ago</span> : null}
-            <span>Next still in {next}s</span>
+            {captured ? <span>{clip.src ? 'Clip captured' : 'Captured'} {age(captured, now)} ago</span> : null}
+            <span>{clip.src ? 'Next clip' : 'Next still'} in {next}s</span>
           </div>
           <div className="hom-viewer-actions">
             <button type="button" className="hom-btn hom-btn--ghost" onClick={() => onDetails(item)}>

@@ -463,6 +463,9 @@ ${LAYER_VARS}
   background: rgba(0, 0, 0, .62); color: #fff; font-size: 10.5px; font-weight: 600; opacity: .85; transition: opacity .15s;
 }
 .hom-camera-open:hover .hom-camera-expand { opacity: 1; }
+.hom-camera-badge { position: absolute; left: 8px; top: 8px; padding: 3px 7px; border-radius: 5px; background: rgba(0, 0, 0, .62); color: #ff6b5e; font-size: 9.5px; letter-spacing: .12em; }
+.hom-wall-tile video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.hom-viewer-img video { display: block; width: 100%; height: 100%; }
 
 /* The big camera view */
 .hom-viewer { position: absolute; inset: 0; z-index: 8; display: flex; align-items: center; justify-content: center; padding: 56px 48px; background: rgba(0, 0, 0, .66); backdrop-filter: blur(6px); animation: hom-fade .2s var(--hom-ease) both; outline: none; }

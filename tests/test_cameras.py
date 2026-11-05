@@ -10,6 +10,7 @@ TFL = [
      "additionalProperties": [
          {"key": "available", "value": "true"},
          {"key": "imageUrl", "value": "https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00002.00865.jpg"},
+         {"key": "videoUrl", "value": "https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00002.00865.mp4"},
          {"key": "view", "value": "West"}]},
     {"id": "JamCams_off", "commonName": "Out of service", "lat": 51.5, "lon": -0.1,
      "additionalProperties": [{"key": "available", "value": "false"},
@@ -31,6 +32,8 @@ SINGAPORE = {"items": [{"timestamp": "2026-10-24T13:09:50+08:00", "cameras": [
 @pytest.fixture(autouse=True)
 def fresh(monkeypatch):
     monkeypatch.setattr(cameras, "_urls", {})
+    monkeypatch.setattr(cameras, "_videos", {})
+    monkeypatch.setattr(cameras, "_clips", cameras.TTLCache(120))
     monkeypatch.setattr(cameras, "_frames", cameras.TTLCache(60))
 
 
@@ -207,3 +210,32 @@ def test_text_feeds_serve_frames_with_their_attribution(monkeypatch):
 ])
 def test_new_image_hosts(url, ok):
     assert cameras._image_allowed(url) is ok
+
+
+MP4 = b"\x00\x00\x00\x20ftypisom" + b"\x00" * 20
+
+
+def test_tfl_clips_are_served_by_id_as_mp4(monkeypatch):
+    monkeypatch.setattr(cameras.http, "get_json", lambda url, source, timeout: TFL)
+    found = cameras.loader(cameras.TFL, cameras.parse_tfl, "TfL")()["items"]
+    assert found[0]["video"] is True and "_video" not in found[0]
+    calls = []
+
+    def fetch(url, **kwargs):
+        calls.append((url, kwargs["max_bytes"]))
+        return FakeResponse(MP4, "video/mp4")
+
+    answer = cameras.clip("cameras:tfl:00002.00865", fetch=fetch)
+    assert answer["video"].startswith("data:video/mp4;base64,") and "TfL Open Data" in answer["attribution"]
+    assert cameras.clip("cameras:tfl:00002.00865", fetch=fetch) is answer and len(calls) == 1
+    assert calls[0] == ("https://s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/00002.00865.mp4", cameras.MAX_CLIP_BYTES)
+
+
+def test_clips_refuse_unknown_ids_and_non_video_answers(monkeypatch):
+    with pytest.raises(UpstreamError) as err:
+        cameras.clip("cameras:sg:1001", fetch=lambda *a, **k: FakeResponse(MP4))
+    assert err.value.status == 404
+    monkeypatch.setattr(cameras.http, "get_json", lambda url, source, timeout: TFL)
+    cameras.loader(cameras.TFL, cameras.parse_tfl, "TfL")()
+    with pytest.raises(UpstreamError):
+        cameras.clip("cameras:tfl:00002.00865", fetch=lambda *a, **k: FakeResponse(b"<html>nope</html>", "text/html"))

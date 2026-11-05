@@ -84,7 +84,8 @@ export function toItem(raw, layerId) {
     speedKts: num(raw.speed_kts, 0, 5000),
     count: num(raw.count, 1, 1e9),
     props,
-    omm
+    omm,
+    video: raw.video === true // a camera with a live video clip (TfL JamCams)
   }
 }
 
