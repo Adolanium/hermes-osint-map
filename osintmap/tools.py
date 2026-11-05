@@ -7,13 +7,23 @@ import json
 import time
 from typing import Any, Callable
 
-from . import geo, layers, panels, recon
+from . import area as areas
+from . import geo, layers, panels, recon, watch
 from .http import UpstreamError, describe
 from .parsers import number
 
 TOOLSET = "osint_map"
-EVENT_LAYERS = [layer_id for layer_id in layers.LAYERS if layer_id != "satellites"]
-EMOJI = {"osint_situation": "🌍", "osint_events": "📍", "osint_country": "🏳️", "osint_recon": "🔎", "osint_news": "📰"}
+EVENT_LAYERS = areas.EVENT_LAYERS
+EMOJI = {"osint_situation": "🌍", "osint_events": "📍", "osint_country": "🏳️", "osint_recon": "🔎", "osint_news": "📰",
+         "osint_watch": "🛰️"}
+
+# Plugin-owned Hermes state (ctx.state), bound at register(). Only osint_watch needs it.
+_state = None
+
+
+def bind_state(state) -> None:
+    global _state
+    _state = state
 
 
 def _schema(name: str, description: str, properties: dict, required: list[str] | None = None) -> dict:
@@ -67,6 +77,29 @@ SCHEMAS = {
         "article listings, not editorially curated.",
         {"query": {"type": "string", "description": "Words to find in titles and summaries; empty for the latest."},
          "limit": {"type": "integer", "description": "Maximum headlines (default 10, max 50)."}},
+    ),
+    "osint_watch": _schema(
+        "osint_watch",
+        "Check a watched area for anything new since the last check: earthquakes at or above min_magnitude, "
+        "disaster alerts at or above min_alert_level, natural events, US severe weather and military aircraft by "
+        "default. The first call for a watch_id records a baseline and reports nothing. The result starts with "
+        f"{watch.NO_NEW} when there is nothing new. Built for scheduled jobs: to set up a recurring watch, create a "
+        "cron job whose prompt calls this tool with the same arguments and replies [SILENT] when the result starts "
+        f"with {watch.NO_NEW}.",
+        {
+            "watch_id": {"type": "string", "description": "Stable id for this watch: 3-41 lower-case letters, digits or dashes."},
+            "label": {"type": "string", "description": "Human name for the area, like Taiwan Strait."},
+            "country": {"type": "string", "description": "ISO 3166 alpha-2 code, like TW (or use lat/lon)."},
+            "lat": {"type": "number", "description": "Latitude of the centre point (needs lon)."},
+            "lon": {"type": "number", "description": "Longitude of the centre point (needs lat)."},
+            "radius_km": {"type": "number", "description": "Radius around lat/lon in km (default 500, max 5000)."},
+            "layers": {"type": "array", "items": {"type": "string", "enum": list(layers.LAYERS)},
+                       "description": "Layers to watch; default quakes, disasters, natural, weather, aircraft."},
+            "min_magnitude": {"type": "number", "description": "Smallest earthquake magnitude to report (default 4.5)."},
+            "min_alert_level": {"type": "string", "enum": ["green", "orange", "red"],
+                                "description": "Lowest GDACS disaster alert level to report (default orange)."},
+        },
+        ["watch_id"],
     ),
 }
 
@@ -150,47 +183,18 @@ def situation(args: dict) -> str:
 
 
 def events(args: dict) -> str:
-    layer_id = args.get("layer") or None
-    if layer_id is not None and layer_id not in layers.LAYERS:
-        return _err(f"Unknown layer {layer_id!r}; use one of {', '.join(layers.LAYERS)}.")
-    country = None
-    if args.get("country"):
-        country = geo.normalise_iso2(str(args["country"]))
-        if country is None:
-            return _err("country must be an ISO 3166 alpha-2 code, like UA.")
-    lat, lon = number(args.get("lat"), -90, 90), number(args.get("lon"), -180, 180)
-    if (args.get("lat") is not None or args.get("lon") is not None) and (lat is None or lon is None):
-        return _err("Give both lat (-90..90) and lon (-180..180), or neither.")
-    radius = number(args.get("radius_km"), 1, 20000) or 500.0
-    radius = min(radius, 5000.0)
+    area = areas.parse(args)
     limit = int(min(100, number(args.get("limit"), 1, 1000) or 20))
-    ids = [layer_id] if layer_id else EVENT_LAYERS
-    answers = {}
-    for one in ids:
-        query = {}
-        if one == "aircraft" and lat is not None:
-            query = {"lat": lat, "lon": lon, "radius": min(250, radius / 1.852)}
-        answers[one] = layers.fetch(one, query)
-    found = []
-    for one, answer in answers.items():
-        for entry in answer["items"]:
-            if country and entry["country"] != country:
-                continue
-            if lat is not None:
-                if entry["lat"] is None or geo.haversine_km(lat, lon, entry["lat"], entry["lon"]) > radius:
-                    continue
-            found.append(entry)
-    found.sort(key=lambda i: (i["severity"], i["time"] or 0), reverse=True)
-    where = []
-    if country:
-        where.append(f"in {geo.name(country) or country}")
-    if lat is not None:
-        where.append(f"within {radius:.0f} km of {lat:.2f},{lon:.2f}")
-    head = f"{len(found)} items {' '.join(where)}".strip() + (f", showing {limit}" if len(found) > limit else "") + ":"
+    found, answers = areas.collect(area)
+    where = area.describe() if (area.country or area.has_point) else ""
+    head = f"{len(found)} items {where}".strip() + (f", showing {limit}" if len(found) > limit else "") + ":"
     lines = [head] + [_item_line(e) for e in found[:limit]]
     lines += ["", "Layer status: " + "; ".join(_layer_status(i, a) for i, a in answers.items())]
     if not found:
         lines.insert(1, "- nothing matches right now")
+    hint = areas.card_hint(area)
+    if hint:
+        lines += ["", hint]
     return _ok("\n".join(lines), count=len(found), sources=sorted({layers.LAYERS[i].source for i in answers}))
 
 
@@ -225,6 +229,7 @@ def country(args: dict) -> str:
         sources.append("RSS/GDELT headlines")
     except UpstreamError as exc:
         lines += ["", f"Headlines unavailable: {exc}"]
+    lines += ["", areas.card_hint(areas.Area(country=code), name)]
     return _ok("\n".join(lines), sources=sources)
 
 
@@ -251,10 +256,19 @@ def news_tool(args: dict) -> str:
     return _ok("\n".join(lines), sources=sorted({f["source"] for f in answer["feeds"] if f["count"]}))
 
 
+def watch_tool(args: dict) -> str:
+    if _state is None:
+        return _err("Watches need Hermes plugin state, which this Hermes did not provide. Update Hermes Agent.")
+    answer = watch.check(_state, str(args.get("watch_id") or "").strip(), args)
+    return _ok(answer["text"], new=answer["new"], baseline=answer["baseline"], count=answer["count"],
+               sources=answer["sources"])
+
+
 HANDLERS: dict[str, Callable[..., str]] = {
     "osint_situation": _guarded(situation),
     "osint_events": _guarded(events),
     "osint_country": _guarded(country),
     "osint_recon": _guarded(recon_tool),
     "osint_news": _guarded(news_tool),
+    "osint_watch": _guarded(watch_tool),
 }

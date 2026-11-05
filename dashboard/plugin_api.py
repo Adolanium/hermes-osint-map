@@ -27,6 +27,8 @@ layers = importlib.import_module(_NAME + ".osintmap.layers")
 panels = importlib.import_module(_NAME + ".osintmap.panels")
 recon = importlib.import_module(_NAME + ".osintmap.recon")
 cameras = importlib.import_module(_NAME + ".osintmap.cameras")
+areas = importlib.import_module(_NAME + ".osintmap.area")
+watches = importlib.import_module(_NAME + ".osintmap.watch")
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -83,3 +85,66 @@ def camera_frame(camera_id: str):
 @router.get("/recon/{kind}")
 def recon_lookup(kind: str, q: str | None = None):
     return _answer(lambda: recon.run(kind, q))
+
+
+@router.get("/area")
+def area(lat: str | None = None, lon: str | None = None, radius: str | None = None, country: str | None = None,
+         layers: str | None = None, limit: str | None = None):
+    """Items in a country or around a point, for the chat map card. Same filter as osint_events."""
+    def work():
+        where = areas.parse({"lat": lat, "lon": lon, "radius_km": radius, "country": country, "layers": layers})
+        if not (where.country or where.has_point):
+            raise net.UpstreamError(400, "Give a country code, or lat and lon.")
+        found, answers = areas.collect(where)
+        try:
+            cap = max(1, min(200, int(limit or 60)))
+        except ValueError:
+            cap = 60
+        counts = {}
+        for entry in found:
+            counts[entry["layer"]] = counts.get(entry["layer"], 0) + 1
+        return {"area": {"lat": where.lat, "lon": where.lon, "radius_km": where.radius_km, "country": where.country,
+                         "layers": list(where.layer_ids), "label": where.describe()},
+                "count": len(found), "counts": counts, "items": found[:cap],
+                "status": {i: {"status": a["status"], "error": a["error"], "updated": a["updated"]} for i, a in answers.items()}}
+    return _answer(work)
+
+
+def _plugin_state():
+    """This plugin's Hermes state, the same store osint_watch writes (backend code may import Hermes)."""
+    from hermes_cli.plugins_state import PluginState
+    return PluginState("hermes-osint-map")
+
+
+@router.get("/watches")
+def watch_list():
+    return _answer(lambda: {"watches": watches.listing(_plugin_state())})
+
+
+@router.post("/watches/{watch_id}/forget")
+def watch_forget(watch_id: str):
+    return _answer(lambda: {"forgotten": watches.forget(_plugin_state(), watch_id)})
+
+
+@router.get("/watches/prompt")
+def watch_prompt(watch_id: str, label: str, lat: str | None = None, lon: str | None = None, radius: str | None = None,
+                 country: str | None = None, layers: str | None = None, min_magnitude: str | None = None,
+                 min_alert_level: str | None = None):
+    """The cron prompt for a new watch, validated here so a bad area fails before a job exists."""
+    def work():
+        args = {"lat": lat, "lon": lon, "radius_km": radius, "country": country, "layers": layers,
+                "min_magnitude": min_magnitude, "min_alert_level": min_alert_level}
+        where = areas.parse(args, default_layers=list(watches.DEFAULT_LAYERS))
+        if not (where.country or where.has_point):
+            raise net.UpstreamError(400, "A watch needs a country, or lat and lon.")
+        if not watches.WATCH_ID.match(watch_id or ""):
+            raise net.UpstreamError(400, "That watch id is not valid.")
+        watches.rules_from(args)
+        clean = {k: v for k, v in {"country": where.country, "lat": where.lat, "lon": where.lon,
+                                   "radius_km": where.radius_km if where.has_point else None,
+                                   "min_magnitude": min_magnitude, "min_alert_level": min_alert_level}.items()
+                 if v not in (None, "")}
+        clean["layers"] = list(where.layer_ids)
+        label_clean = (label or where.describe()).replace('"', "").strip()[:60]
+        return {"prompt": watches.job_prompt(watch_id, clean, label_clean), "label": label_clean}
+    return _answer(work)

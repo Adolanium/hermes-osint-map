@@ -16,7 +16,12 @@ __version__ = "0.3.0"
 def register(ctx: Any) -> None:
     # Imported here, not at module top, so loading the package (pytest does, from the repo root)
     # never needs the plugin's relative imports to resolve.
-    from .osintmap.tools import EMOJI, HANDLERS, SCHEMAS, TOOLSET
+    from .osintmap.tools import EMOJI, HANDLERS, SCHEMAS, TOOLSET, bind_state
+
+    # Watches remember what they already reported in Hermes's own plugin state.
+    state = getattr(ctx, "state", None)
+    if state is not None:
+        bind_state(state)
 
     for name, handler in HANDLERS.items():
         ctx.register_tool(
