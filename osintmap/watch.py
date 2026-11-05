@@ -178,7 +178,8 @@ def job_prompt(watch_id: str, args: dict, label: str) -> str:
             parts.append(f'{name}="{value}"' if isinstance(value, str) else f"{name}={value}")
     if args.get("layers"):
         parts.append("layers=" + ",".join(args["layers"]))
-    return (f"OSINT Map watch. Call the osint_watch tool once with {', '.join(parts)}. "
+    # The id comes first: Hermes's job listings show only the first 100 characters of a prompt.
+    return (f'OSINT Map watch (watch_id="{watch_id}"). Call the osint_watch tool once with {", ".join(parts)}. '
             f"If its result starts with {NO_NEW}, reply with exactly [SILENT] and nothing else. "
             "Otherwise write a short alert of at most 80 words: what happened, where relative to the watched area, "
             "when, and the source, with a link if the result has one. Do not call any other tool.")

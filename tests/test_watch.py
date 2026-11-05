@@ -123,6 +123,8 @@ def test_job_prompt_tells_the_job_to_stay_silent():
     prompt = watch.job_prompt("taiwan", {"lat": 23.7, "lon": 121.0, "radius_km": 300, "layers": ["quakes"]}, "Taiwan")
     assert 'watch_id="taiwan"' in prompt and "lat=23.7" in prompt and "layers=quakes" in prompt
     assert "[SILENT]" in prompt and watch.NO_NEW in prompt
+    long_id = "a" * 41
+    assert f'watch_id="{long_id}"' in watch.job_prompt(long_id, {"country": "JP"}, "Japan")[:100]
 
 
 def test_watch_tool_needs_state_and_answers_json(world, monkeypatch):
