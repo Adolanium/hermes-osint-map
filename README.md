@@ -26,7 +26,7 @@
 Hermes OSINT Map is a community plugin for [Hermes Agent](https://github.com/NousResearch/hermes-agent) with two halves in one package:
 
 - **A Desktop page.** A full-screen globe, built on the [Desktop plugin SDK](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/developer-guide/desktop-plugin-sdk.md), with a sidebar entry and palette commands.
-- **Six agent tools.** They answer from the same sources in any chat: the CLI, Hermes Desktop, the messaging gateway, cron jobs and subagents.
+- **Seven agent tools.** They answer from the same sources in any chat: the CLI, Hermes Desktop, the messaging gateway, cron jobs and subagents.
 
 Every source is public and needs no account. The page's "Brief me", "Ask Hermes" and dossier buttons open a chat with a structured request, and Hermes answers with these tools.
 
@@ -71,8 +71,21 @@ Every source is public and needs no account. The page's "Brief me", "Ask Hermes"
 | `osint_recon` | any recon lookup |
 | `osint_news` | headline search |
 | `osint_watch` | one check of a watched area: new events since the last check, or `NO_NEW_ITEMS` |
+| `osint_show` | puts a scene on the Desktop globe while Hermes answers: a focus, labelled pins, a ring, layers and a vision mode |
 
 When a query is given, `osint_news` also calls the GDELT 2.0 article-search API (`api.gdeltproject.org/api/v2/doc/doc`, no key, 10-minute cache) so local and specialist stories appear, not just the five world services.
+
+### Hermes steers the globe
+
+Ask for a brief, a region or "show me the Red Sea", and Hermes moves the map while it answers. It calls `osint_show`: the globe flies there, drops labelled pins on the places it mentions, rings an area, switches on the layers that matter, and shows its caption at the bottom. Each new part of the answer can move the map again. Close the caption to clear its marks.
+
+### Tour, camera wall and vision modes
+
+- **Tour** (`T`) flies through what matters right now: the strongest quake of the last day, the worst disaster alert, a natural event, the most-attacked country, a live traffic camera and the ISS, with a caption and a progress bar at each stop. Every stop comes from the live layers.
+- **Camera wall.** Click a city's camera cluster and its nine nearest cameras open as a live grid, each still refreshing every minute. Click one for its details.
+- **Day and night** (`N`) shades the globe from the real sun position.
+- **Vision** (`V`) cycles night vision, thermal and CRT. Each remaps the globe's colours and adds an overlay.
+- Cyber attacks warm the countries they land in, and significant recent earthquakes keep rippling.
 
 ### Map cards in chat
 
@@ -123,7 +136,7 @@ The markets panel shows crypto out of the box. Add a free [Twelve Data](https://
 
 ### Keys
 
-`1`–`9` toggle layers, `C` toggles cyber attacks, `/` opens recon, `R` resets the view, `A` toggles spin, `D` toggles dithering, arrows rotate, `+`/`-` zoom, `Esc` closes a panel.
+`1`–`9` toggle layers, `C` toggles cyber attacks, `T` starts the tour, `N` toggles day and night, `V` cycles vision modes, `/` opens recon, `R` resets the view, `A` toggles spin, `D` toggles dithering, arrows rotate, `+`/`-` zoom, `Esc` closes a panel.
 
 ### Test
 
@@ -151,6 +164,7 @@ Hermes gateway  →  public data sources (fixed hosts, cached)  →  the globe, 
 - **Cyber attacks (off until you turn it on).** The layer reads `threatmap-api.checkpoint.com`, the feed behind Check Point's public map at threatmap.checkpoint.com. It is not a documented or offered API. The gateway opens one stream while a page shows the layer and closes it about 45 seconds after the page stops asking. Nothing about you is sent beyond the request itself.
 - **Your key.** The optional Twelve Data key is sent to Twelve Data in a request header, never in a URL, and never logged or echoed in errors.
 - **Watches.** Each watch is a Hermes scheduled job you create and can remove. Every check is one short model call with your default model, plus the same public-source requests the page makes. A watch's state (its area, rules, the last 2,000 event ids it has seen and its last 20 alerts) lives in the plugin's own Hermes state file under `plugin-data`. Alerts go only to the destination you picked.
+- **Hermes's scenes.** `osint_show` keeps only the latest scene (a caption, coordinates, pin labels) in the same plugin state file, for the page to read.
 - **Nothing else.** No shell commands, no processes of its own, no telemetry. The page remembers your layer choices in Hermes Desktop's plugin storage.
 
 ## Compatibility
