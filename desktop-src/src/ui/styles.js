@@ -394,6 +394,60 @@ ${LAYER_VARS}
 .hom-error { padding: 8px 10px; border-radius: 8px; font-size: 11.5px; color: var(--ui-text-primary); background: color-mix(in oklab, var(--ui-red) 14%, transparent); }
 .hom-listening-inline { display: flex; align-items: center; gap: 8px; color: var(--ui-text-secondary); font-size: 11.5px; }
 .hom-facts dd { user-select: text; }
+/* Situation tour */
+.hom-tour { position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 4; width: min(620px, calc(100% - 32px)); pointer-events: none; }
+.hom-tour-card { pointer-events: auto; display: grid; gap: 6px; padding: 16px 18px 14px; animation: hom-rise .45s var(--hom-ease) both; }
+.hom-tour-kicker { font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--ui-accent); }
+.hom-tour-title { font-size: 22px; line-height: 1.2; font-weight: 600; letter-spacing: -.01em; color: var(--ui-text-primary); }
+.hom-tour-detail { font-size: 12.5px; color: var(--ui-text-secondary); }
+.hom-tour-bar { height: 2px; border-radius: 2px; background: var(--hom-line-soft); overflow: hidden; margin-top: 4px; }
+.hom-tour-bar > i { display: block; height: 100%; width: 100%; background: var(--ui-accent); transform-origin: 0 50%; animation: hom-tour-fill linear both; }
+@keyframes hom-tour-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.hom-tour-actions { display: flex; gap: 6px; justify-content: flex-end; }
+.hom-root[data-motion="reduced"] .hom-tour-bar > i { animation: none; }
+
+/* What Hermes put on the map: its own colour, so its marks never blend into a theme's accent */
+.hom-root { --hom-pin: var(--ui-yellow, #f5c542); }
+.hom-show { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+.hom-show-ring { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.hom-show-ring path { fill: none; stroke: var(--hom-pin); stroke-width: 1.8; stroke-dasharray: 6 5; filter: drop-shadow(0 0 6px color-mix(in oklab, var(--hom-pin) 70%, transparent)); animation: hom-dash 18s linear infinite; }
+@keyframes hom-dash { to { stroke-dashoffset: -220; } }
+.hom-show-ring-label { position: absolute; left: 0; top: 0; margin: -22px 0 0 0; translate: -50% 0; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--hom-pin); white-space: nowrap; transition: opacity .2s; }
+.hom-show-pin { position: absolute; left: 0; top: 0; width: 0; height: 0; transition: opacity .2s; }
+.hom-show-dot { position: absolute; left: -7px; top: -7px; width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 3px solid var(--hom-pin); box-shadow: 0 0 0 1.5px rgba(0, 0, 0, .65), 0 0 18px var(--hom-pin); animation: hom-pin-drop .5s var(--hom-ease) both; }
+.hom-show-dot::after { content: ""; position: absolute; inset: -10px; border-radius: 50%; border: 1.5px solid var(--hom-pin); animation: hom-ping 1.8s var(--hom-ease) infinite; }
+.hom-show-tag {
+  position: absolute; left: 12px; top: -11px; padding: 3px 8px; border-radius: 6px; white-space: nowrap;
+  font-size: 11px; font-weight: 600; color: var(--ui-text-primary);
+  background: color-mix(in oklab, var(--ui-bg-editor, #111) 82%, transparent); border: 1px solid color-mix(in oklab, var(--hom-pin) 65%, transparent);
+  backdrop-filter: blur(8px); animation: hom-tag-in .4s var(--hom-ease) both;
+}
+@keyframes hom-tag-in { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
+@keyframes hom-pin-drop { from { transform: translateY(-18px) scale(.4); opacity: 0; } to { transform: none; opacity: 1; } }
+.hom-show-caption {
+  position: absolute; left: 50%; bottom: 84px; translate: -50% 0; z-index: 4; max-width: min(640px, calc(100% - 32px));
+  display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 14px; animation: hom-rise .4s var(--hom-ease) both;
+}
+.hom-show-by { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--hom-pin); white-space: nowrap; }
+.hom-show-text { font-size: 13px; font-weight: 600; color: var(--ui-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hom-root[data-motion="reduced"] .hom-show-dot::after, .hom-root[data-motion="reduced"] .hom-show-ring path { animation: none; }
+.hom-wall { position: absolute; right: 16px; top: 96px; z-index: 3; width: min(560px, calc(100% - 340px)); padding: 13px 14px; display: flex; flex-direction: column; gap: 10px; }
+.hom-wall .hom-card-head .hom-label { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hom-wall .hom-card-head .hom-muted { margin-left: auto; }
+.hom-wall-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.hom-wall-tile {
+  appearance: none; border: 0; padding: 0; position: relative; display: block; border-radius: 7px; overflow: hidden; aspect-ratio: 16 / 9;
+  background: color-mix(in oklab, var(--ui-text-primary) 6%, transparent); cursor: pointer; animation: hom-rise .45s var(--hom-ease) both;
+}
+.hom-wall-tile img, .hom-wall-tile > div { display: block; width: 100%; height: 100%; object-fit: cover; }
+.hom-wall-tile:hover, .hom-wall-tile:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: -2px; }
+.hom-wall-cap {
+  position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 5px; padding: 14px 7px 5px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, .78)); color: #fff; font-size: 9.5px; line-height: 1.2;
+}
+.hom-wall-cap .hom-dot { width: 5px; height: 5px; }
+.hom-wall-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
+.hom-root[data-size="narrow"] .hom-wall { left: 16px; right: 16px; width: auto; }
 .hom-camera { margin: 0; display: flex; flex-direction: column; gap: 6px; }
 .hom-camera-img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; border: 1px solid var(--hom-line); background: color-mix(in oklab, var(--ui-text-primary) 5%, transparent); }
 .hom-camera-empty { display: grid; place-items: center; padding: 12px; text-align: center; font-size: 11px; color: var(--ui-text-tertiary); }

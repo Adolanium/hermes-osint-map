@@ -8,7 +8,7 @@ import time
 from typing import Any, Callable
 
 from . import area as areas
-from . import geo, layers, panels, recon, watch
+from . import geo, layers, panels, recon, show, watch
 from .http import UpstreamError, describe
 from .parsers import number
 
@@ -101,6 +101,33 @@ SCHEMAS = {
                                 "description": "Lowest GDACS disaster alert level to report (default orange)."},
         },
         ["watch_id"],
+    ),
+    "osint_show": _schema(
+        "osint_show",
+        "Put a scene on the OSINT Map globe in Hermes Desktop while you answer: fly to a country or a point, drop "
+        "labelled pins, draw a ring, switch layers, or change the vision mode. Use it in Hermes Desktop whenever "
+        "places matter to the answer (a brief, a region, an incident, 'show me'); call it again as your answer moves "
+        "to the next place. Coordinates should come from the osint_* tools or well-known geography; never invent "
+        "precise positions for events. Not useful in messaging platforms or the CLI.",
+        {
+            "caption": {"type": "string", "description": "One short line shown on the map, like 'Red Sea shipping: 3 incidents'."},
+            "country": {"type": "string", "description": "ISO 3166 alpha-2 code to focus on, like YE (or use lat/lon)."},
+            "lat": {"type": "number", "description": "Latitude to focus on (with lon)."},
+            "lon": {"type": "number", "description": "Longitude to focus on (with lat)."},
+            "radius_km": {"type": "number", "description": "How much to show around lat/lon, in km (default 800)."},
+            "pins": {"type": "array", "description": f"Up to {show.MAX_PINS} labelled pins.",
+                     "items": {"type": "object", "properties": {"lat": {"type": "number"}, "lon": {"type": "number"},
+                                                               "label": {"type": "string"}},
+                               "required": ["lat", "lon", "label"]}},
+            "ring": {"type": "object", "description": "A ring around an area.",
+                     "properties": {"lat": {"type": "number"}, "lon": {"type": "number"},
+                                    "radius_km": {"type": "number"}, "label": {"type": "string"}},
+                     "required": ["lat", "lon", "radius_km"]},
+            "layers_on": {"type": "array", "items": {"type": "string", "enum": list(show.LAYER_IDS)}},
+            "layers_off": {"type": "array", "items": {"type": "string", "enum": list(show.LAYER_IDS)}},
+            "vision": {"type": "string", "enum": list(show.VISION)},
+        },
+        ["caption"],
     ),
 }
 
@@ -265,6 +292,13 @@ def watch_tool(args: dict) -> str:
                sources=answer["sources"])
 
 
+def show_tool(args: dict) -> str:
+    if _state is None:
+        return _err("Showing things on the map needs Hermes plugin state, which this Hermes did not provide.")
+    entry = show.show(_state, args)
+    return _ok(show.describe(entry), seq=entry["seq"])
+
+
 HANDLERS: dict[str, Callable[..., str]] = {
     "osint_situation": _guarded(situation),
     "osint_events": _guarded(events),
@@ -272,4 +306,5 @@ HANDLERS: dict[str, Callable[..., str]] = {
     "osint_recon": _guarded(recon_tool),
     "osint_news": _guarded(news_tool),
     "osint_watch": _guarded(watch_tool),
+    "osint_show": _guarded(show_tool),
 }

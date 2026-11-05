@@ -296,6 +296,12 @@ export function createController({ atom, rest, schedule, storage, notify }) {
     setAlerts: value => update({ alerts: value }),
     setCyber: value => update({ cyber: value }),
     setDayNight: value => update({ dayNight: value }),
+    setLayer(id, on) {
+      if (!LAYERS.some(l => l.id === id) || !!settings.get().layers[id] === on) return
+      update({ layers: { ...settings.get().layers, [id]: on } })
+      if (on) slot(id).next = 0
+      bump()
+    },
     setVision: value => update({ vision: value }),
     toggleCyberType(id) {
       const types = settings.get().cyberTypes ?? {}

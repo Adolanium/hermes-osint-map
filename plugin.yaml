@@ -15,6 +15,7 @@ provides_tools:
   - osint_recon
   - osint_news
   - osint_watch
+  - osint_show
 
 provides_hooks: []
 requires_env: []

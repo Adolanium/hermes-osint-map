@@ -42,7 +42,8 @@ export const prompts = {
       'Use the osint_map tools: start with osint_situation, then osint_events and osint_news where they add something.',
       'Structure: BLUF (2–3 sentences); key developments by region, each with a confidence level (high/medium/low) and its source and time;',
       'natural hazards (earthquakes, disaster alerts, severe weather, space weather); what to watch in the next 24–72 hours.',
-      'Keep what the data shows separate from what you infer, and say when a source is thin.'
+      'Keep what the data shows separate from what you infer, and say when a source is thin.',
+      'I am looking at the OSINT Map: as you reach each region, call osint_show once for it (a short caption, the focus, and pins for the events you mention) so the globe follows your brief.'
     ].join(' '),
 
   country: code =>
@@ -51,6 +52,7 @@ export const prompts = {
       `Use osint_country("${code}") first, then osint_events and osint_news for context; add web research if you have it.`,
       'Structure: BLUF; current situation; active hazards and incidents (with sources and times); risk assessment with confidence levels;',
       'a watchlist of indicators for the next week; key facts. Mark anything inferred as such.',
+      `Call osint_show with country="${code}" and pins for the places you discuss, so I see them on the globe.`,
       `Finish with this line alone in its own paragraph, so I see a live map of it here: ::osint-map{country="${code}"}`
     ].join(' '),
 
@@ -64,6 +66,7 @@ export const prompts = {
       item.url ? `Source: ${item.url}.` : '',
       'Use the osint_map tools (osint_events near that point, osint_news) and web search if available.',
       'Explain what it is, why it matters, and what is confirmed versus uncertain.',
+      item.lat !== null ? `Call osint_show once with pins for it and anything nearby you mention, so it is marked on my globe.` : '',
       item.lat !== null
         ? `Finish with this line alone in its own paragraph, so I see a live map around it here: ::osint-map{lat="${item.lat.toFixed(3)}" lon="${item.lon.toFixed(3)}" radius="400"}`
         : ''

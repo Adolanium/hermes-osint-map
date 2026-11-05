@@ -7,7 +7,8 @@ import { CATEGORIES, createCyberSource, createPlayback, isPlaceable } from '../d
 import { countryName } from '../geo/world.js'
 import { age, fmtCompact, useNow } from './kit.jsx'
 
-const IDLE = { status: null, recent: [], perMinute: 0, byType: {} }
+const IDLE = { status: null, recent: [], perMinute: 0, byType: {}, topTarget: null }
+const TARGET_WINDOW_MS = 5 * 60_000
 const RECENT = 4
 const BACKLOG_ARCS = 100
 const BACKLOG_STEP = 12 // arcs per second while replaying the backlog
@@ -51,6 +52,7 @@ export function useCyberLayer({ rest, globeRef, enabled, mask }) {
     const playback = createPlayback()
     const arrivals = []
     const byType = {}
+    let targets = [] // { at, country } of attacks received in the last few minutes, by when Check Point saw them
     let recent = []
     let status = { state: 'connecting' }
     const schedule = (fn, ms) => {
@@ -69,6 +71,7 @@ export function useCyberLayer({ rest, globeRef, enabled, mask }) {
             byType[event.type] = (byType[event.type] ?? 0) + 1
           }
         }
+        for (const event of events) if (event.dst.country) targets.push({ at: event.received, country: event.dst.country })
         if (events.length) recent = [...events.slice(-RECENT).reverse(), ...recent].slice(0, RECENT)
         const now = performance.now()
         if (backlog) {
@@ -95,7 +98,13 @@ export function useCyberLayer({ rest, globeRef, enabled, mask }) {
     const publish = () => {
       const cutoff = Date.now() - 60_000
       while (arrivals.length && arrivals[0] < cutoff) arrivals.shift()
-      setState({ status, recent, perMinute: arrivals.length, byType: { ...byType } })
+      const since = Date.now() - TARGET_WINDOW_MS
+      targets = targets.filter(t => t.at >= since).slice(-5000)
+      const tally = new Map()
+      for (const t of targets) tally.set(t.country, (tally.get(t.country) ?? 0) + 1)
+      let topTarget = null
+      for (const [country, count] of tally) if (!topTarget || count > topTarget.count) topTarget = { country, count }
+      setState({ status, recent, perMinute: arrivals.length, byType: { ...byType }, topTarget })
     }
     const ticker = setInterval(publish, 1000)
     publish()

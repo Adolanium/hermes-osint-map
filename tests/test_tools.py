@@ -58,7 +58,7 @@ def test_register_declares_every_manifest_tool():
     package.register(ctx)
     manifest = (ROOT / "plugin.yaml").read_text(encoding="utf-8")
     names = [t["name"] for t in ctx.tools]
-    assert names == ["osint_situation", "osint_events", "osint_country", "osint_recon", "osint_news", "osint_watch"]
+    assert names == ["osint_situation", "osint_events", "osint_country", "osint_recon", "osint_news", "osint_watch", "osint_show"]
     for tool in ctx.tools:
         assert f"  - {tool['name']}" in manifest
         assert tool["toolset"] == "osint_map" and tool["schema"]["name"] == tool["name"] and callable(tool["handler"])

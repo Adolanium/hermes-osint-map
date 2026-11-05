@@ -29,6 +29,7 @@ recon = importlib.import_module(_NAME + ".osintmap.recon")
 cameras = importlib.import_module(_NAME + ".osintmap.cameras")
 areas = importlib.import_module(_NAME + ".osintmap.area")
 watches = importlib.import_module(_NAME + ".osintmap.watch")
+scenes = importlib.import_module(_NAME + ".osintmap.show")
 cyberfeed = importlib.import_module(_NAME + ".osintmap.cyberfeed")
 checkpoint = importlib.import_module(_NAME + ".osintmap.checkpoint")
 
@@ -118,6 +119,18 @@ def _plugin_state():
     """This plugin's Hermes state, the same store osint_watch writes (backend code may import Hermes)."""
     from hermes_cli.plugins_state import PluginState
     return PluginState("hermes-osint-map")
+
+
+@router.get("/show")
+def show_latest(after: str | None = None):
+    """The newest scene Hermes put on the map with osint_show (the page polls this)."""
+    def work():
+        try:
+            cursor = max(0, int(after or 0))
+        except ValueError:
+            raise net.UpstreamError(400, "after must be a whole number.") from None
+        return scenes.latest(_plugin_state(), cursor)
+    return _answer(work)
 
 
 @router.get("/watches")

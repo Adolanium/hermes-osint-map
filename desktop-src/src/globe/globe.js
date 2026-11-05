@@ -979,6 +979,11 @@ export function createGlobe(canvas, options) {
       autoRotateHoldUntil = 0
       wake()
     },
+    /** Keep the globe from spinning for `ms` (0 lets it spin again), e.g. while Hermes shows a scene. */
+    hold(ms) {
+      autoRotateHoldUntil = ms > 0 ? performance.now() + ms : 0
+      wake()
+    },
     setDither(value) {
       earthUniforms.uDither.value = value ? 1 : 0
       backdropUniforms.uDither.value = value ? 1 : 0

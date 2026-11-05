@@ -9,6 +9,9 @@ import { applyVision, buildPalette, createColorResolver, VISION_MODES } from '..
 import { usePrefersReducedMotion, useThrottled } from './kit.jsx'
 import { CountryPanel, FeedCard, ItemPanel, LayersCard, MarketsCard, ReconDrawer, SpaceWeatherCard } from './panels.jsx'
 import { CyberCard, useCyberLayer } from './cyber.jsx'
+import { CameraWall, wallCameras } from './wall.jsx'
+import { sceneTarget, ShowOverlay, useShowFeed } from './show.jsx'
+import { buildTour, TourCaption, useTour } from './tour.jsx'
 import { WatchDialog, WatchesCard } from './watches.jsx'
 import { CSS } from './styles.js'
 
@@ -41,6 +44,9 @@ export function OsintPage({ controller, rest, ask, openExternal, host, pending, 
   const [contextLost, setContextLost] = useState(null)
   const [watchDraft, setWatchDraft] = useState(null)
   const [watchesVersion, setWatchesVersion] = useState(0)
+  const [wall, setWall] = useState(null)
+  const [scene, setScene] = useState(null)
+  const [tour, setTour] = useState(null)
   const focusRequest = useValue(pending.focus)
   const watchRequest = useValue(pending.watchRequest)
 
@@ -85,6 +91,49 @@ export function OsintPage({ controller, rest, ask, openExternal, host, pending, 
     [controller, sizeClass]
   )
   const clearSelection = useCallback(() => controller.selection.set(null), [controller])
+
+  // Hermes's scenes (osint_show): switch what it asked for, fly there, and draw its marks.
+  const applyScene = useCallback(
+    sc => {
+      setTour(null)
+      setWall(null)
+      for (const id of sc.layers_on ?? []) id === 'cyber' ? controller.setCyber(true) : controller.setLayer(id, true)
+      for (const id of sc.layers_off ?? []) id === 'cyber' ? controller.setCyber(false) : controller.setLayer(id, false)
+      if (sc.vision) controller.setVision(sc.vision)
+      const g = globeRef.current
+      g?.hold(10 * 60_000)
+      if (sc.focus?.country) selectCountry(sc.focus.country)
+      else {
+        controller.selection.set(null)
+        const target = sceneTarget(sc)
+        if (target && g) g.flyTo(target.lat, target.lon, distFor(target.radiusKm))
+      }
+      setScene(sc)
+    },
+    [controller, selectCountry]
+  )
+  useShowFeed(rest, applyScene)
+  const clearScene = useCallback(() => {
+    setScene(null)
+    globeRef.current?.hold(0)
+  }, [])
+
+  const startTour = useCallback(() => {
+    const stops = buildTour({ controller, cyber })
+    if (!stops.length) {
+      notify?.('Nothing to tour yet: the layers are still loading.')
+      return
+    }
+    setScene(null)
+    setWall(null)
+    setTour({ stops, index: 0 })
+  }, [controller, cyber, notify])
+  const endTour = useCallback(() => {
+    setTour(null)
+    controller.selection.set(null)
+    globeRef.current?.resetView()
+  }, [controller])
+  useTour(tour, setTour, { selectItem, selectCountry, controller, onDone: endTour })
 
   // A chat map card asked to open the map on an area: fly there once the globe is up.
   useEffect(() => {
@@ -146,8 +195,12 @@ export function OsintPage({ controller, rest, ask, openExternal, host, pending, 
     const k = e.key
     let handled = true
     if (k >= '1' && k <= String(LAYERS.length)) controller.toggleLayer(LAYERS[Number(k) - 1].id)
+    else if (k === 't' || k === 'T') (tour ? endTour() : startTour())
     else if (k === 'Escape') {
-      if (recon) setRecon(false)
+      if (tour) endTour()
+      else if (scene) clearScene()
+      else if (wall) setWall(null)
+      else if (recon) setRecon(false)
       else if (selection) clearSelection()
       else if (openRail) setOpenRail(null)
       else handled = false
@@ -180,13 +233,39 @@ export function OsintPage({ controller, rest, ask, openExternal, host, pending, 
         vision={settings.vision ?? 'normal'}
         globeRef={globeRef}
         onPick={onPick}
+        onCluster={cluster => {
+          const items = wallCameras(controller.layerItems('cameras'), cluster)
+          if (!items.length) return
+          const [operator, place] = (items[0].subtitle ?? '').split(' · ')
+          setWall({ key: `${cluster.lat}:${cluster.lon}`, label: place ? `${operator} · ${place}` : operator || 'Traffic cameras', operator: operator || 'Traffic cameras', count: cluster.count, items })
+        }}
         onContextLost={error => setContextLost({ message: error ? String(error.message ?? error) : null })}
         selectedItem={selectedItem}
         selectedCountry={selectedCountry}
       />
       <div className="hom-shade" aria-hidden="true" />
+      {scene ? <ShowOverlay globeRef={globeRef} scene={scene} onClose={clearScene} /> : null}
+      {tour ? (
+        <TourCaption
+          tour={tour}
+          onStop={endTour}
+          onBrief={() => {
+            endTour()
+            ask('brief')
+          }}
+        />
+      ) : null}
 
-      <TopBar controller={controller} settings={settings} registry={registry} onBrief={() => ask('brief')} onRecon={() => setRecon(r => !r)} recon={recon} />
+      <TopBar
+        controller={controller}
+        settings={settings}
+        registry={registry}
+        onBrief={() => ask('brief')}
+        onRecon={() => setRecon(r => !r)}
+        recon={recon}
+        touring={!!tour}
+        onTour={() => (tour ? endTour() : startTour())}
+      />
 
       <div className="hom-rail hom-rail--left" data-open={openRail === 'left'}>
         {recon ? (
@@ -235,6 +314,19 @@ export function OsintPage({ controller, rest, ask, openExternal, host, pending, 
         ) : null}
         <FeedCard controller={controller} settings={settings} rest={rest} onItem={selectItem} openExternal={openExternal} alerts={alerts} />
       </div>
+
+      {wall ? (
+        <CameraWall
+          key={wall.key}
+          rest={rest}
+          wall={wall}
+          onClose={() => setWall(null)}
+          onOpen={item => {
+            setWall(null)
+            selectItem(item)
+          }}
+        />
+      ) : null}
 
       <Dock
         controller={controller}
@@ -306,7 +398,7 @@ export function OsintPage({ controller, rest, ask, openExternal, host, pending, 
 }
 
 /** Owns the canvas and the three.js globe; mirrors controller data into markers. */
-function GlobeView({ controller, globeRef, onPick, onContextLost, selectedItem, selectedCountry, vision }) {
+function GlobeView({ controller, globeRef, onPick, onCluster, onContextLost, selectedItem, selectedCountry, vision }) {
   const canvasRef = useRef(null)
   const tipRef = useRef(null)
   const calloutRef = useRef(null)
@@ -315,6 +407,8 @@ function GlobeView({ controller, globeRef, onPick, onContextLost, selectedItem, 
   const version = useThrottled(controller.version.subscribe, controller.version.get, 250)
   const onPickRef = useRef(onPick)
   onPickRef.current = onPick
+  const onClusterRef = useRef(onCluster)
+  onClusterRef.current = onCluster
   const onLostRef = useRef(onContextLost)
   onLostRef.current = onContextLost
   const seenLayers = useRef(new Set())
@@ -333,8 +427,10 @@ function GlobeView({ controller, globeRef, onPick, onContextLost, selectedItem, 
         loop: (fn, opts) => createBudgetedLoop(fn, opts),
         onPick: target => {
           const cluster = target.kind === 'marker' ? clustersRef.current.get(target.id) : null
-          if (cluster) globeRef.current?.flyTo(cluster.lat, cluster.lon, 1.035)
-          else onPickRef.current(target)
+          if (cluster) {
+            globeRef.current?.flyTo(cluster.lat, cluster.lon, 1.035)
+            onClusterRef.current?.(cluster)
+          } else onPickRef.current(target)
         },
         onContextLost: () => onLostRef.current?.(),
         onView: v => {
@@ -590,7 +686,7 @@ function UtcClock() {
   )
 }
 
-function TopBar({ controller, settings, registry, onBrief, onRecon, recon }) {
+function TopBar({ controller, settings, registry, onBrief, onRecon, recon, touring, onTour }) {
   const enabled = LAYERS.filter(l => settings.layers[l.id])
   const live = enabled.filter(l => controller.layerState(l.id).status === 'ok').length
   const failing = enabled.filter(l => controller.layerState(l.id).status === 'error').length
@@ -613,6 +709,11 @@ function TopBar({ controller, settings, registry, onBrief, onRecon, recon }) {
         <Tip label="Open the recon toolkit (/)">
           <button type="button" className="hom-btn hom-btn--ghost" aria-pressed={recon} onClick={onRecon}>
             <Codicon name="search" /> Recon
+          </button>
+        </Tip>
+        <Tip label="Fly through the biggest things on the map right now (T)">
+          <button type="button" className="hom-btn hom-btn--ghost" aria-pressed={touring} onClick={onTour}>
+            <Codicon name={touring ? 'debug-stop' : 'play'} /> {touring ? 'Stop tour' : 'Tour'}
           </button>
         </Tip>
         <Tip label="Hermes writes a situational brief from the live layers">
