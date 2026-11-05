@@ -30,6 +30,14 @@ export const LAYERS = [
     hint: 'Strategic straits and canals for shipping' }
 ]
 
+/** An earthquake item's magnitude, from its props or its USGS-style title (\"M 5.8 - ...\"). */
+export function quakeMagnitude(item) {
+  const prop = item.props?.find(([k]) => k === 'Magnitude')?.[1]
+  const m = /(-?\d+(?:\.\d+)?)/.exec(prop ?? '') ?? /\bM\s?(\d+(?:\.\d+)?)/.exec(item.title ?? '')
+  const value = m ? Number(m[1]) : NaN
+  return Number.isFinite(value) ? value : null
+}
+
 export const LAYER_INDEX = Object.fromEntries(LAYERS.map((l, i) => [l.id, i]))
 export const layerOf = id => LAYERS[LAYER_INDEX[id]]
 

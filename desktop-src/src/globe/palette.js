@@ -69,3 +69,53 @@ export function buildPalette(resolver) {
     cyber
   }
 }
+
+// --- Vision modes ------------------------------------------------------------------------------
+// Night vision and thermal remap every globe colour through one ramp: the map's ground by its
+// brightness (low on the ramp), events high on it, so markers and arcs stay the hottest things.
+// CRT keeps the theme's colours; its look is the overlay (scanlines and vignette) on the page.
+
+export const VISION_MODES = [
+  { id: 'normal', label: 'Normal' },
+  { id: 'nvg', label: 'Night vision' },
+  { id: 'thermal', label: 'Thermal' },
+  { id: 'crt', label: 'CRT' }
+]
+
+const RAMPS = {
+  nvg: [[0, [0.0, 0.03, 0.01]], [0.3, [0.03, 0.2, 0.06]], [0.62, [0.18, 0.78, 0.3]], [0.85, [0.55, 1.0, 0.55]], [1, [0.9, 1.0, 0.85]]],
+  thermal: [[0, [0.02, 0.0, 0.07]], [0.28, [0.2, 0.04, 0.42]], [0.5, [0.62, 0.1, 0.48]], [0.72, [0.95, 0.38, 0.12]], [0.88, [1.0, 0.74, 0.2]], [1, [1.0, 0.98, 0.78]]]
+}
+
+function ramp(stops, t) {
+  t = Math.max(0, Math.min(1, t))
+  for (let i = 1; i < stops.length; i++) {
+    const [t1, c1] = stops[i]
+    const [t0, c0] = stops[i - 1]
+    if (t <= t1) return mix(c0, c1, (t - t0) / (t1 - t0))
+  }
+  return stops[stops.length - 1][1]
+}
+
+/** The palette as seen through a vision mode. */
+export function applyVision(p, mode) {
+  const stops = RAMPS[mode]
+  if (!stops) return p
+  const ground = c => ramp(stops, 0.04 + luminance(c) * 0.62)
+  const hot = (c, k = 0) => ramp(stops, 0.74 + luminance(c) * 0.2 + k)
+  return {
+    ...p,
+    dark: true,
+    ocean: ramp(stops, 0.03),
+    oceanLit: ramp(stops, 0.16),
+    landLow: ground(p.landLow),
+    land: ramp(stops, mode === 'thermal' ? 0.46 : 0.5),
+    rim: ramp(stops, 0.58),
+    star: ramp(stops, 0.7),
+    ink: ramp(stops, 0.95),
+    accent: hot(p.accent, 0.06),
+    heat: ramp(stops, mode === 'thermal' ? 0.97 : 0.9),
+    layers: p.layers.map(c => hot(c)),
+    cyber: (p.cyber ?? []).map(c => hot(c, 0.05))
+  }
+}

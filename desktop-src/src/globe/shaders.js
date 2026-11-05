@@ -52,6 +52,8 @@ uniform vec3 uLand;
 uniform vec3 uAccent;
 uniform vec3 uHeatColor;
 uniform vec3 uRim;
+uniform vec3 uSun;     // unit vector to the subsolar point, object space
+uniform float uNight;  // 0 = no day/night shading, 1 = full
 in vec3 vObj;
 in vec3 vNormalV;
 in vec3 vPosV;
@@ -101,7 +103,12 @@ void main() {
   float lonGrid = fwidth(lonDeg) > 90.0 ? gridLine(lonWrapped, 15.0) : gridLine(lonDeg, 15.0);
   float grid = max(gridLine(latDeg, 15.0), lonGrid * (1.0 - smoothstep(70.0, 86.0, abs(latDeg))));
 
-  float oceanLevel = 0.015 + 0.2 * lit * lit * lit + 0.34 * rim * rim + 0.2 * grid;
+  // Day and night from the real sun: the night side dims, and the terminator gets a soft band.
+  float sunDot = dot(n, uSun);
+  float night = (1.0 - smoothstep(-0.10, 0.08, sunDot)) * uNight;
+  float twilight = exp(-(sunDot * sunDot) / 0.0022) * uNight;
+
+  float oceanLevel = (0.015 + 0.2 * lit * lit * lit + 0.34 * rim * rim + 0.2 * grid) * mix(1.0, 0.42, night);
   vec3 ocean = mix(uOcean, uOceanLit, tone(oceanLevel, threshold, uDither));
 
   bool country = id > 0.5 && id < 254.5;
@@ -110,6 +117,7 @@ void main() {
   float hovered = country && abs(id - uHover) < 0.5 ? 1.0 : 0.0;
   float landLevel = 0.30 + 0.70 * lit + 0.18 * rim;
   landLevel *= mix(1.0, 0.62, uFocus * (1.0 - selected));
+  landLevel *= mix(1.0, 0.36, night);
   vec3 landColor = mix(uLandLow, uLand, tone(landLevel, threshold, uDither));
   landColor = mix(landColor, uAccent, selected * (0.42 + 0.28 * tone(lit, threshold, uDither)) + hovered * 0.22);
   // Heat glows rather than floods: capped, and dithered into "hot pixels" in dither mode.
@@ -118,6 +126,7 @@ void main() {
   landColor = mix(landColor, mix(uOcean, uAccent, selected), border * (0.55 + 0.25 * selected));
 
   vec3 color = mix(ocean, landColor, land);
+  color = mix(color, uRim, twilight * mix(0.16, 0.3, land) * tone(0.6, threshold, uDither * 0.5));
   // Atmospheric rim light inside the limb.
   color = mix(color, uRim, rim * mix(0.32, 0.5, uDark) * tone(0.35 + rim, threshold, uDither * 0.6));
   gl_FragColor = vec4(color, 1.0);
@@ -519,6 +528,67 @@ void main() {
   alpha = clamp(alpha, 0.0, 1.0);
   if (alpha < 0.003) discard;
   vec3 color = mix(uColors[kind], vec3(1.0), (1.0 - smoothstep(0.0, 0.3, life)) * 0.35 * uDark * (1.0 - vRole));
+  gl_FragColor = vec4(color * alpha, alpha);
+}
+`
+
+
+// --- Earthquake ripples: rings that keep spreading from each significant quake ----------------
+
+export const rippleVertex = /* glsl */ `
+precision highp float;
+in vec3 aPos;
+in vec4 aMeta;    // size, phase, layer, alpha
+uniform float uMask[12];
+out vec2 vUv;
+out float vPhase;
+out float vLayer;
+out float vAlpha;
+void main() {
+  int layer = int(aMeta.z + 0.5);
+  float on = 0.0;
+  for (int i = 0; i < 12; i++) if (i == layer) on = uMask[i];
+  vUv = position.xy * 2.0;
+  vPhase = aMeta.y;
+  vLayer = aMeta.z;
+  vAlpha = aMeta.w;
+  if (on < 0.5 || aMeta.w <= 0.0) {
+    gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+    return;
+  }
+  vec3 n = normalize(aPos);
+  vec3 up = abs(n.y) > 0.98 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0);
+  vec3 east = normalize(cross(up, n));
+  vec3 north = cross(n, east);
+  vec3 world = n * 1.0035 + (east * position.x + north * position.y) * aMeta.x;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(world, 1.0);
+}
+`
+
+export const rippleFragment = /* glsl */ `
+precision highp float;
+uniform vec3 uColors[12];
+uniform float uTime;
+uniform float uStatic;
+in vec2 vUv;
+in float vPhase;
+in float vLayer;
+in float vAlpha;
+void main() {
+  float r = length(vUv);
+  if (r > 1.0) discard;
+  float aa = fwidth(r) * 1.3;
+  float alpha = 0.0;
+  for (int k = 0; k < 3; k++) {
+    float ph = uStatic > 0.5 ? 0.35 + 0.25 * float(k) : fract(uTime / 3.4 + vPhase + float(k) / 3.0);
+    float w = max(0.014, aa * 1.1); // at least about a pixel wide, however far you zoom out
+    float ring = 1.0 - smoothstep(w, w + aa, abs(r - ph));
+    alpha += ring * pow(1.0 - ph, 1.4) * (uStatic > 0.5 ? 0.5 : 0.9);
+  }
+  alpha = clamp(alpha * vAlpha, 0.0, 1.0);
+  if (alpha < 0.004) discard;
+  vec3 color = vec3(0.0);
+  for (int i = 0; i < 12; i++) if (float(i) == floor(vLayer + 0.5)) color = uColors[i];
   gl_FragColor = vec4(color * alpha, alpha);
 }
 `

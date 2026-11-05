@@ -1,11 +1,11 @@
 // The OSINT Map page: a full-bleed globe with glass overlays.
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Codicon, createBudgetedLoop, GlyphSpinner, haptic, Tip, useTheme, useValue } from '@hermes/plugin-sdk'
-import { CAMERA_DETAIL_DIST, clusterItems, LAYERS, layerOf, toMarker } from '../data/layers.js'
+import { CAMERA_DETAIL_DIST, clusterItems, LAYERS, layerOf, quakeMagnitude, toMarker } from '../data/layers.js'
 import { orbitPath } from '../data/satellites.js'
 import { countryAt, countryByCode, countryByIndex, countryName } from '../geo/world.js'
 import { createGlobe } from '../globe/globe.js'
-import { buildPalette, createColorResolver } from '../globe/palette.js'
+import { applyVision, buildPalette, createColorResolver, VISION_MODES } from '../globe/palette.js'
 import { usePrefersReducedMotion, useThrottled } from './kit.jsx'
 import { CountryPanel, FeedCard, ItemPanel, LayersCard, MarketsCard, ReconDrawer, SpaceWeatherCard } from './panels.jsx'
 import { CyberCard, useCyberLayer } from './cyber.jsx'
@@ -63,6 +63,7 @@ export function OsintPage({ controller, rest, ask, openExternal, host, pending, 
     g.setMask(LAYERS.map(l => !!settings.layers[l.id]))
     g.setDither(settings.dither)
     g.setAutoRotate(settings.autoRotate)
+    g.setDayNight(settings.dayNight !== false)
   }, [settings])
   useEffect(() => globeRef.current?.setReducedMotion(reduced), [reduced])
   const cyber = useCyberLayer({ rest, globeRef, enabled: !!settings.cyber, mask: settings.cyberTypes })
@@ -155,6 +156,8 @@ export function OsintPage({ controller, rest, ask, openExternal, host, pending, 
     else if (k === 'a' || k === 'A') controller.setAutoRotate(!settings.autoRotate)
     else if (k === 'd' || k === 'D') controller.setDither(!settings.dither)
     else if (k === 'c' || k === 'C') controller.setCyber(!settings.cyber)
+    else if (k === 'n' || k === 'N') controller.setDayNight(settings.dayNight === false)
+    else if (k === 'v' || k === 'V') controller.setVision(nextVision(settings.vision))
     else if (k === '+' || k === '=') g?.zoomBy(0.85)
     else if (k === '-' || k === '_') g?.zoomBy(1 / 0.85)
     else if (k === 'ArrowLeft') g?.rotateBy(-8, 0)
@@ -174,6 +177,7 @@ export function OsintPage({ controller, rest, ask, openExternal, host, pending, 
       <style>{CSS}</style>
       <GlobeView
         controller={controller}
+        vision={settings.vision ?? 'normal'}
         globeRef={globeRef}
         onPick={onPick}
         onContextLost={error => setContextLost({ message: error ? String(error.message ?? error) : null })}
@@ -302,7 +306,7 @@ export function OsintPage({ controller, rest, ask, openExternal, host, pending, 
 }
 
 /** Owns the canvas and the three.js globe; mirrors controller data into markers. */
-function GlobeView({ controller, globeRef, onPick, onContextLost, selectedItem, selectedCountry }) {
+function GlobeView({ controller, globeRef, onPick, onContextLost, selectedItem, selectedCountry, vision }) {
   const canvasRef = useRef(null)
   const tipRef = useRef(null)
   const calloutRef = useRef(null)
@@ -377,7 +381,8 @@ function GlobeView({ controller, globeRef, onPick, onContextLost, selectedItem, 
     globe.setMask(LAYERS.map(l => !!s.layers[l.id]))
     globe.setDither(s.dither)
     globe.setAutoRotate(s.autoRotate)
-    globe.setPalette(buildPalette(resolver))
+    globe.setDayNight(s.dayNight !== false)
+    globe.setPalette(applyVision(buildPalette(resolver), s.vision))
     const ro = new ResizeObserver(([entry]) => globe.resize(entry.contentRect.width, entry.contentRect.height))
     ro.observe(canvas)
     canvas.__homResolver = resolver
@@ -400,9 +405,9 @@ function GlobeView({ controller, globeRef, onPick, onContextLost, selectedItem, 
     const globe = globeRef.current
     const resolver = canvasRef.current?.__homResolver
     if (!globe || !resolver) return undefined
-    const id = requestAnimationFrame(() => globe.setPalette(buildPalette(resolver)))
+    const id = requestAnimationFrame(() => globe.setPalette(applyVision(buildPalette(resolver), vision)))
     return () => cancelAnimationFrame(id)
-  }, [themeName, resolvedMode, globeRef])
+  }, [themeName, resolvedMode, globeRef, vision])
 
   // Data → markers and country heat.
   useEffect(() => {
@@ -437,6 +442,16 @@ function GlobeView({ controller, globeRef, onPick, onContextLost, selectedItem, 
     markers.sort((a, b) => (QUIET_LAYERS.has(LAYERS[a.layer].id) ? 1 : 0) - (QUIET_LAYERS.has(LAYERS[b.layer].id) ? 1 : 0))
     clustersRef.current = clusters
     globe.setMarkers(markers, { quietIds: quiet })
+    // Significant recent quakes keep rippling: M4.5 and up from the last two days, strongest first.
+    const ripples = []
+    for (const item of controller.layerItems('quakes')) {
+      const mag = quakeMagnitude(item)
+      const age = item.time ? now - item.time : 0
+      if (mag === null || mag < 4.5 || age > 48 * 3600_000 || item.lat === null) continue
+      ripples.push({ lat: item.lat, lon: item.lon, mag, alpha: Math.max(0.35, 1 - age / (48 * 3600_000)) })
+    }
+    ripples.sort((a, b) => b.mag - a.mag)
+    globe.setRipples(ripples)
     let max = 0
     for (let i = 0; i < 256; i++) max = Math.max(max, heat[i])
     // Heat marks hot spots only: relative to the busiest country, cut below a quarter of it.
@@ -494,7 +509,14 @@ function GlobeView({ controller, globeRef, onPick, onContextLost, selectedItem, 
 
   return (
     <>
-      <canvas ref={canvasRef} className="hom-canvas" aria-label="Interactive globe. Drag to rotate, scroll to zoom, click a marker or a country for details." />
+      <canvas ref={canvasRef} className="hom-canvas" data-vision={vision} aria-label="Interactive globe. Drag to rotate, scroll to zoom, click a marker or a country for details." />
+      {vision !== 'normal' ? (
+        <div className="hom-vision" data-mode={vision} aria-hidden="true">
+          <span className="hom-vision-label hom-mono">
+            {VISION_MODES.find(m => m.id === vision)?.label ?? vision} · <UtcStamp />
+          </span>
+        </div>
+      ) : null}
       <div ref={calloutRef} className="hom-callout" style={{ opacity: 0 }} aria-hidden="true">
         {calloutText ? (
           <>
@@ -542,6 +564,17 @@ function useThemeSafe() {
   } catch {
     return { themeName: null, resolvedMode: null }
   }
+}
+
+const nextVision = mode => VISION_MODES[(VISION_MODES.findIndex(m => m.id === (mode ?? 'normal')) + 1) % VISION_MODES.length].id
+
+function UtcStamp() {
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(id)
+  }, [])
+  return <span>{now.toISOString().slice(0, 19).replace('T', ' ')}Z</span>
 }
 
 function UtcClock() {
@@ -623,6 +656,17 @@ function Dock({ controller, settings, narrow, openRail, setOpenRail, recon, setR
       <Tip label="Dithered or smooth globe (D)">
         <button type="button" className="hom-btn" aria-pressed={settings.dither} onClick={() => controller.setDither(!settings.dither)} aria-label="Dithered globe">
           <Codicon name="symbol-color" />
+        </button>
+      </Tip>
+      <Tip label="Day and night from the real sun (N)">
+        <button type="button" className="hom-btn" aria-pressed={settings.dayNight !== false} onClick={() => controller.setDayNight(settings.dayNight === false)} aria-label="Day and night">
+          <Codicon name="color-mode" />
+        </button>
+      </Tip>
+      <Tip label={`Vision: ${VISION_MODES.find(m => m.id === (settings.vision ?? 'normal'))?.label ?? 'Normal'} (V)`}>
+        <button type="button" className="hom-btn" aria-pressed={(settings.vision ?? 'normal') !== 'normal'} onClick={() => controller.setVision(nextVision(settings.vision))} aria-label="Vision mode">
+          <Codicon name="eye" />
+          {narrow || (settings.vision ?? 'normal') === 'normal' ? null : <span>{VISION_MODES.find(m => m.id === settings.vision)?.label}</span>}
         </button>
       </Tip>
       <Tip label="Refresh every layer now">

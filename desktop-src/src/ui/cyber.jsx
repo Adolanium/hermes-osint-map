@@ -9,6 +9,8 @@ import { age, fmtCompact, useNow } from './kit.jsx'
 
 const IDLE = { status: null, recent: [], perMinute: 0, byType: {} }
 const RECENT = 4
+const BACKLOG_ARCS = 100
+const BACKLOG_STEP = 12 // arcs per second while replaying the backlog
 
 export const cyberColor = c => `var(${c.cssVar}, var(${c.fallbackVar}))`
 
@@ -68,8 +70,15 @@ export function useCyberLayer({ rest, globeRef, enabled, mask }) {
           }
         }
         if (events.length) recent = [...events.slice(-RECENT).reverse(), ...recent].slice(0, RECENT)
-        // Draw only the backlog's tail, so turning the layer on isn't a flood of arcs.
-        playback.push((backlog ? events.slice(-20) : events).filter(isPlaceable), performance.now())
+        const now = performance.now()
+        if (backlog) {
+          // Turning the layer on replays the last minute or so the relay buffered, spread over a
+          // few seconds, so the globe doesn't open empty when the feed is slow.
+          const tail = events.filter(isPlaceable).slice(-BACKLOG_ARCS)
+          for (let i = 0; i * BACKLOG_STEP < tail.length; i++) playback.push(tail.slice(i * BACKLOG_STEP, (i + 1) * BACKLOG_STEP), now + i * 1000)
+        } else {
+          playback.push(events.filter(isPlaceable), now)
+        }
       },
       onStatus(next) {
         status = next

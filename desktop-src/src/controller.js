@@ -17,7 +17,9 @@ const DEFAULTS = {
   autoRotate: true,
   alerts: true,
   cyber: false,
-  cyberTypes: {}
+  cyberTypes: {},
+  dayNight: true,
+  vision: 'normal'
 }
 
 /**
@@ -293,6 +295,8 @@ export function createController({ atom, rest, schedule, storage, notify }) {
     setAutoRotate: value => update({ autoRotate: value }),
     setAlerts: value => update({ alerts: value }),
     setCyber: value => update({ cyber: value }),
+    setDayNight: value => update({ dayNight: value }),
+    setVision: value => update({ vision: value }),
     toggleCyberType(id) {
       const types = settings.get().cyberTypes ?? {}
       update({ cyberTypes: { ...types, [id]: types[id] === false } })

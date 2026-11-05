@@ -39,7 +39,9 @@ import {
   markerFragment,
   markerVertex,
   pathFragment,
-  pathVertex
+  pathVertex,
+  rippleFragment,
+  rippleVertex
 } from './shaders.js'
 
 export const MARKER_POOL = 16384
@@ -48,6 +50,7 @@ const PATH_POINTS = 256
 const ARC_POOL = 320
 const ARC_SEGMENTS = 64
 const IMPACT_POOL = 640
+const RIPPLE_POOL = 64
 const FOV = 30
 const DEG = Math.PI / 180
 
@@ -63,6 +66,21 @@ export function toLatLon(v) {
 }
 
 const EARTH_KM = 6371
+
+/** The subsolar point (where the sun is overhead) for a date, from the standard low-precision
+ *  solar position formulas: good to a fraction of a degree, which is plenty for shading. */
+export function subsolar(date = new Date()) {
+  const d = date.getTime() / 86400000 + 2440587.5 - 2451545.0 // days since J2000
+  const g = (357.529 + 0.98560028 * d) * DEG
+  const q = 280.459 + 0.98564736 * d
+  const L = (q + 1.915 * Math.sin(g) + 0.02 * Math.sin(2 * g)) * DEG
+  const e = (23.439 - 0.00000036 * d) * DEG
+  const decl = Math.asin(Math.sin(e) * Math.sin(L))
+  const ra = Math.atan2(Math.cos(e) * Math.sin(L), Math.cos(L)) / DEG
+  const gmst = (((18.697374558 + 24.06570982441908 * d) % 24) + 24) % 24
+  const lon = ((((ra - gmst * 15) % 360) + 540) % 360) - 180
+  return { lat: decl / DEG, lon }
+}
 const easeInOut = t => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2)
 const wrapLon = lon => ((((lon + 180) % 360) + 360) % 360) - 180
 
@@ -147,7 +165,9 @@ export function createGlobe(canvas, options) {
     uLand: { value: new Vector3() },
     uAccent: { value: new Vector3() },
     uHeatColor: { value: new Vector3() },
-    uRim: { value: new Vector3() }
+    uRim: { value: new Vector3() },
+    uSun: { value: new Vector3(0, 0, 1) },
+    uNight: { value: 1 }
   }
   const earth = new Mesh(
     new SphereGeometry(1, 160, 96),
@@ -306,6 +326,48 @@ export function createGlobe(canvas, options) {
   impacts.frustumCulled = false
   impacts.renderOrder = 2
   scene.add(impacts)
+  // --- Earthquake ripples ----------------------------------------------------------------------
+  const rippleGeometry = new InstancedBufferGeometry()
+  {
+    const quad = new PlaneGeometry(1, 1)
+    rippleGeometry.index = quad.index
+    rippleGeometry.setAttribute('position', quad.getAttribute('position'))
+  }
+  const ripplePos = new InstancedBufferAttribute(new Float32Array(RIPPLE_POOL * 3), 3)
+  const rippleMeta = new InstancedBufferAttribute(new Float32Array(RIPPLE_POOL * 4), 4)
+  rippleGeometry.setAttribute('aPos', ripplePos)
+  rippleGeometry.setAttribute('aMeta', rippleMeta)
+  rippleGeometry.instanceCount = 0
+  const rippleMaterial = new ShaderMaterial({
+    vertexShader: rippleVertex,
+    fragmentShader: rippleFragment,
+    uniforms: { uMask: markerUniforms.uMask, uColors: { value: colorUniform }, uTime: markerUniforms.uTime, uStatic: markerUniforms.uStatic },
+    side: DoubleSide,
+    transparent: true,
+    depthWrite: false,
+    depthTest: true,
+    blending: NormalBlending,
+    premultipliedAlpha: true,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1
+  })
+  const ripples = new Mesh(rippleGeometry, rippleMaterial)
+  ripples.frustumCulled = false
+  ripples.renderOrder = 2
+  scene.add(ripples)
+
+  // Country heat: what the page sets (hot spots from the event layers) plus what cyber attacks
+  // add as they land, which fades on its own.
+  const baseHeat = new Float32Array(256)
+  const cyberHeat = new Float32Array(256)
+  const pendingHeat = [] // { at, index, amount }
+  let cyberHeatActive = false
+  function writeHeat() {
+    for (let i = 0; i < 256; i++) heatBytes[i] = Math.round(Math.min(1, baseHeat[i] + cyberHeat[i]) * 255)
+    heatTexture.needsUpdate = true
+  }
+
   const arcSlots = new Array(ARC_POOL).fill(null) // { eventId, start, dur }
   let arcNext = 0
   const impactSlots = new Array(IMPACT_POOL).fill(null) // { start, dur }
@@ -331,6 +393,7 @@ export function createGlobe(canvas, options) {
   let hoverIndex = -1
   let tracked = null // { lat, lon, altKm }
   let lastViewEmit = ''
+  let lastSun = -1e9
 
   // --- Sizing ---------------------------------------------------------------------------------
   function resize(width, height) {
@@ -351,7 +414,7 @@ export function createGlobe(canvas, options) {
     earthUniforms.uCell.value = cell
     backdropUniforms.uCell.value = cell
     markerUniforms.uPixelRatio.value = pixelRatio
-    arcUniforms.uWidth.value = 1.5 * pixelRatio
+    arcUniforms.uWidth.value = 1.8 * pixelRatio
     wake()
   }
   const minDist = () => 1.035 // close enough to separate individual cameras in a city
@@ -410,7 +473,7 @@ export function createGlobe(canvas, options) {
     // Same place at both ends (domestic attacks often share one centroid): draw a short local hop.
     const arcEnd = ang < 0.006 ? toVector(event.dst.lat + 2.2, event.dst.lon + 3.2, tmpArcC) : b
     if (ang < 0.006) ang = Math.acos(Math.max(-1, Math.min(1, a.dot(arcEnd))))
-    const dur = reducedMotion ? 3.2 : 1.5 + 2.1 * (ang / Math.PI)
+    const dur = reducedMotion ? 3.2 : 2.4 + 3.4 * (ang / Math.PI) // slow enough that several are in flight at once
     const start = clock
     const slot = arcNext
     arcNext = (arcNext + 1) % ARC_POOL
@@ -421,7 +484,11 @@ export function createGlobe(canvas, options) {
     arcSlots[slot] = { eventId: event.id, start, dur }
     const scale = 0.8 + Math.min(1.2, Math.log10(event.count + 1) * 0.6)
     addImpact(a, kind, start, reducedMotion ? 3.2 : 1.2, 1, 0.9)
-    addImpact(b, kind, reducedMotion ? start : start + dur / 1.3, reducedMotion ? 3.2 : 2.0, 0, scale)
+    const arrive = reducedMotion ? start : start + dur / 1.3
+    addImpact(b, kind, arrive, reducedMotion ? 3.2 : 2.0, 0, scale)
+    const index = indexAt(event.dst.lat, event.dst.lon)
+    if (index > 0 && index < 255) pendingHeat.push({ at: arrive, index, amount: 0.1 + Math.min(0.18, Math.log10(event.count + 1) * 0.09) })
+    if (pendingHeat.length > 600) pendingHeat.splice(0, pendingHeat.length - 600)
     wake()
   }
 
@@ -443,6 +510,7 @@ export function createGlobe(canvas, options) {
   }
 
   function attacksActive() {
+    if (pendingHeat.length || cyberHeatActive) return true
     for (const slot of arcSlots) if (slot && clock < slot.start + slot.dur) return true
     for (const slot of impactSlots) if (slot && clock < slot.start + slot.dur) return true
     return false
@@ -454,6 +522,27 @@ export function createGlobe(canvas, options) {
     arcTiming.needsUpdate = impactTiming.needsUpdate = true
     arcSlots.fill(null)
     impactSlots.fill(null)
+    pendingHeat.length = 0
+    cyberHeat.fill(0)
+    cyberHeatActive = false
+    writeHeat()
+    wake()
+  }
+
+  /** Quakes to ripple: [{ lat, lon, mag, alpha }], strongest first. */
+  function setRipples(list) {
+    const n = Math.min(list.length, RIPPLE_POOL)
+    const quakes = 0 // the earthquake layer's colour and mask slot
+    for (let i = 0; i < n; i++) {
+      const q = list[i]
+      const v = toVector(q.lat, q.lon, tmpA)
+      ripplePos.setXYZ(i, v.x, v.y, v.z)
+      // Ground size grows with magnitude: the outer ring reaches about 500 km at M4.5, 1,700 km at M7.
+      const size = 0.16 + Math.min(3, Math.max(0, q.mag - 4.5)) * 0.15
+      rippleMeta.setXYZW(i, size, (Math.abs(Math.sin(q.lat * 12.9898 + q.lon * 78.233)) * 43758.5453) % 1, quakes, q.alpha ?? 1)
+    }
+    rippleGeometry.instanceCount = n
+    ripplePos.needsUpdate = rippleMeta.needsUpdate = true
     wake()
   }
 
@@ -754,6 +843,32 @@ export function createGlobe(canvas, options) {
 
     markerUniforms.uTime.value = clock
     arcUniforms.uTime.value = clock
+    if (now - lastSun > 20000) {
+      lastSun = now
+      const sun = subsolar(new Date())
+      toVector(sun.lat, sun.lon, earthUniforms.uSun.value)
+    }
+    // Attack heat: land arrivals, then fade (half-life about 6 s).
+    for (let i = pendingHeat.length - 1; i >= 0; i--) {
+      const h = pendingHeat[i]
+      if (clock >= h.at) {
+        cyberHeat[h.index] = Math.min(0.85, cyberHeat[h.index] + h.amount)
+        pendingHeat.splice(i, 1)
+        cyberHeatActive = true
+      }
+    }
+    if (cyberHeatActive && dt > 0) {
+      const decay = Math.exp(-dt * 0.115)
+      let any = false
+      for (let i = 1; i < 255; i++) {
+        if (cyberHeat[i] > 0.004) {
+          cyberHeat[i] *= decay
+          any = true
+        } else cyberHeat[i] = 0
+      }
+      writeHeat()
+      cyberHeatActive = any
+    }
     // Markers grow a little as you zoom in, so dense areas separate.
     markerUniforms.uZoom.value = Math.min(1.7, Math.max(0.85, Math.sqrt(fitDist / view.dist)))
     backdropUniforms.uTime.value = now / 1000
@@ -788,6 +903,7 @@ export function createGlobe(canvas, options) {
     if (autoRotate && !reducedMotion) return false
     // Pulses on newly arrived markers need frames for 2.4 s.
     for (const t of births.values()) if (clock - t < 2.5) return false
+    if (rippleGeometry.instanceCount > 0 && mask[0] && !reducedMotion) return false
     return !attacksActive()
   }
 
@@ -822,8 +938,14 @@ export function createGlobe(canvas, options) {
     view: () => ({ ...view, fit: fitDist }),
     /** Per-country heat 0..1, indexed by raster index (a Float32Array or array of 256). */
     setHeat(values) {
-      for (let i = 0; i < 256; i++) heatBytes[i] = Math.round(Math.max(0, Math.min(1, values[i] || 0)) * 255)
-      heatTexture.needsUpdate = true
+      for (let i = 0; i < 256; i++) baseHeat[i] = Math.max(0, Math.min(1, values[i] || 0))
+      writeHeat()
+      wake()
+    },
+    setRipples,
+    /** Shade the night side from the real sun position. */
+    setDayNight(value) {
+      earthUniforms.uNight.value = value ? 1 : 0
       wake()
     },
     focusCountry(country) {
@@ -894,7 +1016,7 @@ export function createGlobe(canvas, options) {
       canvas.removeEventListener('dblclick', onDoubleClick)
       canvas.removeEventListener('webglcontextlost', onContextLost)
       canvas.removeEventListener('webglcontextrestored', onContextRestored)
-      for (const obj of [backdrop, earth, markers, path, arcs, impacts]) {
+      for (const obj of [backdrop, earth, markers, path, arcs, impacts, ripples]) {
         obj.geometry.dispose()
         obj.material.dispose()
       }

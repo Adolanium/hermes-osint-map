@@ -29,6 +29,52 @@ ${LAYER_VARS}
 }
 .hom-root *, .hom-root *::before, .hom-root *::after { box-sizing: border-box; }
 .hom-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+.hom-canvas[data-vision="crt"] { filter: contrast(1.14) saturate(1.3) brightness(1.04); }
+.hom-canvas[data-vision="nvg"] { filter: contrast(1.08) brightness(1.1); }
+/* Vision modes: an overlay over the globe only (the rails sit above it). */
+.hom-vision { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+.hom-vision::before, .hom-vision::after { content: ""; position: absolute; inset: 0; }
+.hom-vision[data-mode="nvg"]::before {
+  background:
+    radial-gradient(ellipse 62% 70% at 50% 50%, transparent 58%, rgba(0, 0, 0, .78) 100%),
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, .22) 0 1px, transparent 1px 3px);
+}
+.hom-vision[data-mode="nvg"]::after {
+  inset: -50%;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' seed='3'/><feColorMatrix values='0 0 0 0 0.4  0 0 0 0 1  0 0 0 0 0.5  0 0 0 0.55 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+  opacity: .16; mix-blend-mode: screen; animation: hom-grain .5s steps(4) infinite;
+}
+.hom-vision[data-mode="thermal"]::before {
+  background:
+    radial-gradient(ellipse 70% 78% at 50% 50%, transparent 62%, rgba(0, 0, 0, .6) 100%),
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, .1) 0 1px, transparent 1px 4px);
+}
+.hom-vision[data-mode="thermal"]::after {
+  /* A sight reticle at the centre of the globe. */
+  inset: auto; left: 50%; top: 50%; width: 120px; height: 120px; margin: -60px 0 0 -60px;
+  background:
+    linear-gradient(rgba(255, 214, 140, .7), rgba(255, 214, 140, .7)) 0 50% / 38px 1px no-repeat,
+    linear-gradient(rgba(255, 214, 140, .7), rgba(255, 214, 140, .7)) 100% 50% / 38px 1px no-repeat,
+    linear-gradient(rgba(255, 214, 140, .7), rgba(255, 214, 140, .7)) 50% 0 / 1px 38px no-repeat,
+    linear-gradient(rgba(255, 214, 140, .7), rgba(255, 214, 140, .7)) 50% 100% / 1px 38px no-repeat;
+}
+.hom-vision[data-mode="crt"]::before {
+  background:
+    radial-gradient(ellipse 75% 80% at 50% 50%, transparent 60%, rgba(0, 0, 0, .55) 100%),
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, .34) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(255, 0, 60, .035) 0 1px, rgba(0, 255, 120, .035) 1px 2px, rgba(40, 90, 255, .035) 2px 3px);
+}
+.hom-vision[data-mode="crt"]::after { background: rgba(255, 255, 255, .025); animation: hom-flicker 3.2s steps(2) infinite; }
+.hom-vision-label {
+  position: absolute; left: 50%; bottom: 92px; transform: translateX(-50%); z-index: 2;
+  font-size: 10px; letter-spacing: .22em; text-transform: uppercase; white-space: nowrap; opacity: .85;
+}
+.hom-vision[data-mode="nvg"] .hom-vision-label { color: #8dffa6; }
+.hom-vision[data-mode="thermal"] .hom-vision-label { color: #ffc46b; }
+.hom-vision[data-mode="crt"] .hom-vision-label { color: var(--ui-text-secondary); }
+@keyframes hom-grain { 0% { transform: translate(0, 0); } 25% { transform: translate(-3%, 2%); } 50% { transform: translate(2%, -3%); } 75% { transform: translate(-2%, -1%); } 100% { transform: translate(0, 0); } }
+@keyframes hom-flicker { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+.hom-root[data-motion="reduced"] .hom-vision::after { animation: none; }
 .hom-canvas[data-hover="true"] { cursor: pointer; }
 .hom-canvas:active { cursor: grabbing; }
 .hom-shade {
