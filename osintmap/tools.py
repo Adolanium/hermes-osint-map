@@ -85,7 +85,8 @@ SCHEMAS = {
         "default. The first call for a watch_id records a baseline and reports nothing. The result starts with "
         f"{watch.NO_NEW} when there is nothing new. Built for scheduled jobs: to set up a recurring watch, create a "
         "cron job whose prompt calls this tool with the same arguments and replies [SILENT] when the result starts "
-        f"with {watch.NO_NEW}.",
+        f"with {watch.NO_NEW}. Name that job 'OSINT watch · <label>' and start its prompt with "
+        "'OSINT Map watch (watch_id=\"<id>\").' so the OSINT Map page lists it.",
         {
             "watch_id": {"type": "string", "description": "Stable id for this watch: 3-41 lower-case letters, digits or dashes."},
             "label": {"type": "string", "description": "Human name for the area, like Taiwan Strait."},

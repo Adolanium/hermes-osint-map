@@ -9,13 +9,13 @@
   **The world's live signals on one globe, and an agent that can brief you on them.**
 
   Earthquakes, disaster alerts, natural events, severe weather, aircraft, satellites, news-derived incidents, traffic cameras and shipping chokepoints on a dithered 3D globe inside Hermes Desktop.
-  Country dossiers, a passive recon toolkit, and briefings Hermes writes from the same public sources.
+  Country dossiers, a passive recon toolkit, briefings Hermes writes from the same public sources, live map cards in chat, and watches that tell you when something new happens in an area.
 
-  <sub>POWERED BY <a href="https://github.com/NousResearch/hermes-agent">HERMES AGENT</a> &nbsp;·&nbsp; COMMUNITY PLUGIN &nbsp;·&nbsp; VERSION 0.3.0</sub>
+  <sub>POWERED BY <a href="https://github.com/NousResearch/hermes-agent">HERMES AGENT</a> &nbsp;·&nbsp; COMMUNITY PLUGIN &nbsp;·&nbsp; VERSION 0.4.0</sub>
 
   <br /><br />
 
-  [What it does](#one-globe-every-signal) &nbsp;·&nbsp; [Install it](#make-it-yours) &nbsp;·&nbsp; [Where your data goes](#privacy-you-can-explain-in-one-breath)
+  [What it does](#one-globe-every-signal) &nbsp;·&nbsp; [Watches](#watch-an-area) &nbsp;·&nbsp; [Install it](#make-it-yours) &nbsp;·&nbsp; [Where your data goes](#privacy-you-can-explain-in-one-breath)
 
 </div>
 
@@ -26,7 +26,7 @@
 Hermes OSINT Map is a community plugin for [Hermes Agent](https://github.com/NousResearch/hermes-agent) with two halves in one package:
 
 - **A Desktop page.** A full-screen globe, built on the [Desktop plugin SDK](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/developer-guide/desktop-plugin-sdk.md), with a sidebar entry and palette commands.
-- **Five agent tools.** They answer from the same sources in any chat: the CLI, Hermes Desktop, the messaging gateway, cron jobs and subagents.
+- **Six agent tools.** They answer from the same sources in any chat: the CLI, Hermes Desktop, the messaging gateway, cron jobs and subagents.
 
 Every source is public and needs no account. The page's "Brief me", "Ask Hermes" and dossier buttons open a chat with a structured request, and Hermes answers with these tools.
 
@@ -68,8 +68,27 @@ Every source is public and needs no account. The page's "Brief me", "Ask Hermes"
 | `osint_country` | a country's facts, current events and headlines |
 | `osint_recon` | any recon lookup |
 | `osint_news` | headline search |
+| `osint_watch` | one check of a watched area: new events since the last check, or `NO_NEW_ITEMS` |
 
 When a query is given, `osint_news` also calls the GDELT 2.0 article-search API (`api.gdeltproject.org/api/v2/doc/doc`, no key, 10-minute cache) so local and specialist stories appear, not just the five world services.
+
+### Map cards in chat
+
+When Hermes answers about a place in Hermes Desktop, the answer ends with a live map card: a small dithered globe of that area with its events marked, the four most recent ones listed with distance and age, and two buttons. **Open in OSINT Map** flies the big globe there. **Watch this area** starts a watch.
+
+The card is a transcript directive (`::osint-map{lat="23.7" lon="121.0" radius="300"}` or `::osint-map{country="JP"}`). The plugin validates its attributes and fetches the data itself, so the model never writes the numbers you see. Tool answers ask for the card only in Hermes Desktop; the CLI and messaging platforms get plain text.
+
+### Watch an area
+
+Pick a spot on the globe, an event or a country and choose **Watch**. You set the radius, what counts (earthquakes from M4.5, M5 or M6, orange or red disaster alerts, natural events, severe weather, military aircraft, news incidents), how often to check, and where alerts go: Hermes only, or Telegram, Discord, Slack, WhatsApp, Signal, email or every connected channel.
+
+A watch is a normal Hermes scheduled job, named `OSINT watch · <name>`, so it keeps running with the page closed and shows up in Scheduled jobs too. Each run calls `osint_watch` once:
+
+- The first check records what is already in the area and says nothing.
+- Later checks report only events that pass your rules and weren't seen before.
+- When nothing is new, the job replies `[SILENT]` and Hermes delivers nothing.
+
+The Watches card on the page lists every watch with its last check and latest alert, and pauses, resumes or removes it. You can also ask for one in any chat ("watch Taiwan for M5+ quakes and tell me on Telegram"); Hermes creates the same kind of job with its cron tool.
 
 ## Small decisions, already made
 
@@ -128,13 +147,14 @@ Hermes gateway  →  public data sources (fixed hosts, cached)  →  the globe, 
 - **What leaves your machine.** Requests to the public sources below, identified as `hermes-osint-map`. Recon lookups send the domain, IP, CVE, GitHub name or MAC prefix you enter to the matching public service. TLS and header lookups connect to the host you name.
 - **Who it talks to.** USGS, NASA EONET, GDACS, the National Weather Service, GDELT, adsb.lol, CelesTrak, NOAA SWPC, Transport for London (api.tfl.gov.uk and its JamCams image bucket), data.gov.sg (Singapore traffic images), the World Bank, the BBC/Al Jazeera/DW/Guardian/France 24 RSS feeds, CoinGecko, and Twelve Data if you add a key. Recon uses Google Public DNS, rdap.org, crt.sh, CIRCL CVE, CISA KEV, ipwho.is, GitHub and MacVendors. Only the first three octets of a MAC address are sent.
 - **Your key.** The optional Twelve Data key is sent to Twelve Data in a request header, never in a URL, and never logged or echoed in errors.
-- **Nothing else.** No files written, no shell commands, no background processes, no telemetry. The page remembers your layer choices in Hermes Desktop's plugin storage.
+- **Watches.** Each watch is a Hermes scheduled job you create and can remove. Every check is one short model call with your default model, plus the same public-source requests the page makes. A watch's state (its area, rules, the last 2,000 event ids it has seen and its last 20 alerts) lives in the plugin's own Hermes state file under `plugin-data`. Alerts go only to the destination you picked.
+- **Nothing else.** No shell commands, no processes of its own, no telemetry. The page remembers your layer choices in Hermes Desktop's plugin storage.
 
 ## Compatibility
 
 | Hermes Agent | Python | Status |
 | --- | --- | --- |
-| 0.22.5 | 3.14 | Tested by hand in Hermes Desktop (0.1.0, 0.3.0) and in a browser preview of the page (0.2.0) |
+| 0.22.5 | 3.14 | Tested by hand in Hermes Desktop (0.1.0, 0.3.0, 0.4.0) and in a browser preview of the page (0.2.0) |
 | 0.22.2 (minimum) | 3.11+ | SDK surface checked |
 
 The plugin depends only on `httpx` and `fastapi`, which Hermes already ships.
@@ -147,6 +167,8 @@ The plugin depends only on `httpx` and `fastapi`, which Hermes already ships.
 - GDELT incidents are machine-coded from news. Locations are often a city or country centroid, and labels like "Fight" describe the coverage, not a verified event. Titles echo the article's own headline when its URL slug is readable, and the place name when it is not.
 - crt.sh, behind subdomain lookups, is often slow or down. Those lookups then fail with a clear error.
 - Without a Twelve Data key, the markets panel shows crypto only.
+- A watch checks only as often as its schedule, every 15 minutes at the fastest. It is an early heads-up, not an emergency alert system.
+- Map cards render in Hermes Desktop only.
 
 ## Data and credits
 
