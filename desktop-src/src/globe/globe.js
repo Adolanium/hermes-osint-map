@@ -42,7 +42,7 @@ import {
   pathVertex
 } from './shaders.js'
 
-export const MARKER_POOL = 8192
+export const MARKER_POOL = 16384
 export const MAX_LAYERS = 12
 const PATH_POINTS = 256
 const ARC_POOL = 320

@@ -25,7 +25,7 @@ export const LAYERS = [
   { id: 'satellites', label: 'Satellites', shape: 'plus', cssVar: '--ui-purple', fallbackVar: '--ui-accent', fadeAfter: null, size: [5, 5],
     hint: 'CelesTrak orbital elements, positions computed live (SGP4)' },
   { id: 'cameras', label: 'Traffic cameras', shape: 'frame', cssVar: '--ui-warm', fallbackVar: '--ui-text-secondary', fadeAfter: null, size: [3.5, 3.5],
-    hint: 'Official open-data traffic cameras: Transport for London and Singapore LTA. Click one for its latest still' },
+    hint: 'Official open-data traffic cameras: Transport for London, Singapore LTA, Caltrans (California highways) and the Hong Kong Transport Department. Click one for its latest still' },
   { id: 'chokepoints', label: 'Chokepoints', shape: 'ring', cssVar: '--ui-accent', fallbackVar: '--ui-text-primary', fadeAfter: null, size: [9, 9],
     hint: 'Strategic straits and canals for shipping' }
 ]

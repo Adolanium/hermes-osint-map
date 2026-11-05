@@ -5,16 +5,22 @@ private cameras:
 
 - Transport for London JamCams (api.tfl.gov.uk), "Powered by TfL Open Data".
 - Singapore LTA traffic images (data.gov.sg), Singapore Open Data Licence v1.0.
+- Caltrans CCTV (cwwp2.dot.ca.gov), California's state highways, published free of charge.
+- Hong Kong Transport Department traffic snapshots (DATA.GOV.HK), under its terms of use.
 
 Frames are fetched by camera *id*: the id is looked up in the camera list this module produced,
-and the image URL must be on one of the two fixed image hosts. A caller can never make the gateway
+and the image URL must be on one of the fixed image hosts. A caller can never make the gateway
 fetch an arbitrary URL.
 """
 
 from __future__ import annotations
 
 import base64
+import csv
+import io
+import re
 import threading
+import xml.etree.ElementTree as ElementTree
 from typing import Any, Callable
 from urllib.parse import urlsplit
 
@@ -23,10 +29,16 @@ from .http import TTLCache, UpstreamError
 
 TFL = "https://api.tfl.gov.uk/Place/Type/JamCam"
 SINGAPORE = "https://api.data.gov.sg/v1/transport/traffic-images"
+CALTRANS_DISTRICTS = tuple(range(1, 13))
+HONG_KONG = "https://static.data.gov.hk/td/traffic-snapshot-images/code/Traffic_Camera_Locations_En.xml"
 IMAGE_HOSTS = {
     "s3-eu-west-1.amazonaws.com": "/jamcams.tfl.gov.uk/",  # TfL JamCams bucket only
     "images.data.gov.sg": "/",
+    "cwwp2.dot.ca.gov": "/data/d",  # Caltrans district image folders only
+    "tdcctv.data.one.gov.hk": "/",
 }
+SOURCE_NAMES = {"tfl": "TfL", "sg": "data.gov.sg", "ca": "Caltrans", "hk": "the Hong Kong Transport Department"}
+MAX_CAMERAS = 10_000
 MAX_FRAME_BYTES = 1_500_000
 FRAME_TTL = 60.0
 IMAGE_TYPES = ("image/jpeg", "image/png", "image/webp")
@@ -35,7 +47,13 @@ ATTRIBUTION = {
     "tfl": "Powered by TfL Open Data. Contains OS data © Crown copyright and database rights.",
     "sg": "Contains information from Traffic Images accessed from data.gov.sg, made available under the "
           "Singapore Open Data Licence version 1.0.",
+    "ca": "Caltrans CCTV, California Department of Transportation (cwwp2.dot.ca.gov).",
+    "hk": "Traffic snapshot images: Transport Department, the Government of the Hong Kong SAR, via DATA.GOV.HK.",
 }
+
+
+def caltrans_url(district: int) -> str:
+    return f"https://cwwp2.dot.ca.gov/data/d{district}/cctv/cctvStatusD{district:02d}.csv"
 
 _DIRECTIONS = {"north", "south", "east", "west", "north east", "north west", "south east", "south west",
                "northeast", "northwest", "southeast", "southwest", "n", "s", "e", "w", "ne", "nw", "se", "sw"}
@@ -51,8 +69,8 @@ def _remember(found: list[dict]) -> None:
         for entry in found:
             url, source = entry.pop("_image"), entry.pop("_source")
             _urls[entry["id"]] = (url, source)
-        if len(_urls) > 4000:  # bounded: keep the newest entries only
-            for key in list(_urls)[: len(_urls) - 4000]:
+        if len(_urls) > MAX_CAMERAS:  # bounded: keep the newest entries only
+            for key in list(_urls)[: len(_urls) - MAX_CAMERAS]:
                 del _urls[key]
 
 
@@ -114,9 +132,75 @@ def parse_singapore(raw: Any) -> list[dict]:
     return out
 
 
+_SLUG = re.compile(r"/cctv/image/([A-Za-z0-9_-]{1,80})/")
+
+
+def parse_caltrans(text: str) -> list[dict]:
+    """A Caltrans district's ``cctvStatusDnn.csv`` → camera items (out-of-service cameras skipped)."""
+    out = []
+    for row in csv.DictReader(io.StringIO(text)):
+        lat, lon = parsers.number(row.get("latitude"), -90, 90), parsers.number(row.get("longitude"), -180, 180)
+        image = row.get("currentImageURL")
+        slug = _SLUG.search(image or "")
+        district = parsers.text(row.get("district"), 3)
+        if lat is None or lon is None or not _image_allowed(image) or not slug or not district:
+            continue
+        if str(row.get("inService")).lower() != "true":
+            continue
+        place = parsers.text(row.get("nearbyPlace"), 60)
+        direction = parsers.text(row.get("direction"), 20)
+        facing = direction.lower() if direction and direction.lower() in _DIRECTIONS else None
+        found = parsers.item(
+            "cameras", f"ca:d{district}:{slug.group(1)}", "traffic", lat, lon,
+            parsers.text(row.get("locationName"), 120) or "California highway camera",
+            subtitle="Caltrans" + (f" · {place}" if place else "") + (f" · facing {facing}" if facing else ""),
+            severity=0.2, country="US", url="https://quickmap.dot.ca.gov/",
+            rows=[("Operator", f"Caltrans District {district}"), ("Route", parsers.text(row.get("route"), 20)),
+                  ("Near", place), ("Facing", direction)],
+        )
+        out.append({**found, "_image": image, "_source": "ca"})
+    return out
+
+
+def parse_hong_kong(text: str) -> list[dict]:
+    """The Transport Department's camera list (XML) → camera items."""
+    try:
+        root = ElementTree.fromstring(text)
+    except ElementTree.ParseError as exc:
+        raise UpstreamError(502, "The Hong Kong camera list is not valid XML.") from exc
+    out = []
+    for image in root.iter("image"):
+        field = {child.tag: (child.text or "").strip() for child in image}
+        lat, lon = parsers.number(field.get("latitude"), -90, 90), parsers.number(field.get("longitude"), -180, 180)
+        key = field.get("key", "")
+        url = field.get("url")
+        if lat is None or lon is None or not re.fullmatch(r"[A-Z0-9]{2,12}", key) or not _image_allowed(url):
+            continue
+        title = re.sub(r"\s*\[[A-Z0-9]+\]\s*$", "", field.get("description", "")) or f"Hong Kong camera {key}"
+        district = parsers.text(field.get("district"), 40)
+        found = parsers.item(
+            "cameras", f"hk:{key}", "traffic", lat, lon, parsers.text(title, 120),
+            subtitle="Transport Department, Hong Kong" + (f" · {district}" if district else ""),
+            severity=0.2, country="HK", url="https://www.td.gov.hk/en/transport_in_hong_kong/its/",
+            rows=[("Operator", "Transport Department"), ("Region", parsers.text(field.get("region"), 40)),
+                  ("District", district), ("Camera", key)],
+        )
+        out.append({**found, "_image": url, "_source": "hk"})
+    return out
+
+
 def loader(url: str, parse: Callable[[Any], list[dict]], source: str) -> Callable[[], dict]:
     def load() -> dict:
         found = parse(http.get_json(url, source=source, timeout=20.0))
+        _remember(found)
+        return {"items": found}
+    return load
+
+
+def text_loader(url: str, parse: Callable[[str], list[dict]], source: str, timeout: float = 45.0) -> Callable[[], dict]:
+    """For the CSV and XML feeds. Caltrans's server is slow, so the timeout is generous."""
+    def load() -> dict:
+        found = parse(http.get(url, source=source, timeout=timeout).text())
         _remember(found)
         return {"items": found}
     return load
@@ -134,7 +218,7 @@ def frame(camera_id: str, fetch: Callable[..., Any] = http.get) -> dict:
         raise UpstreamError(403, "Refusing to fetch an image from that host.")
 
     def load() -> dict:
-        response = fetch(url, source=source.upper() if source == "sg" else "TfL", timeout=15.0,
+        response = fetch(url, source=SOURCE_NAMES.get(source, source), timeout=15.0,
                          max_bytes=MAX_FRAME_BYTES, headers={"Accept": ", ".join(IMAGE_TYPES)})
         # Judge by the bytes, not the label: data.gov.sg serves its JPEGs as octet-stream.
         kind = sniff_image(response.body)

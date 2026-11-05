@@ -62,7 +62,7 @@ class Layer:
     needs_key: str | None = None
 
 
-_cache = SnapshotCache(size=64)
+_cache = SnapshotCache(size=96)
 _area_cache = SnapshotCache(size=16)  # aircraft area queries: few, short-lived, potentially large
 _health: dict[str, dict] = {}
 _health_lock = threading.Lock()
@@ -200,11 +200,18 @@ LAYERS: dict[str, Layer] = {layer.id: layer for layer in (
     Layer("incidents", "News incidents", "GDELT", "https://www.gdeltproject.org",
           "The GDELT Project (cite GDELT when reusing)", 900,
           lambda p: [Part("incidents", 900, "GDELT", lambda: _items(_window.refresh()), _cache)]),
-    Layer("cameras", "Traffic cameras", "TfL, data.gov.sg", "https://api-portal.tfl.gov.uk",
-          "Powered by TfL Open Data; Singapore traffic images from data.gov.sg (Singapore Open Data Licence)", 3600,
+    Layer("cameras", "Traffic cameras", "TfL, data.gov.sg, Caltrans, HK Transport Department", "https://api-portal.tfl.gov.uk",
+          "Powered by TfL Open Data; Singapore traffic images from data.gov.sg (Singapore Open Data Licence); "
+          "Caltrans CCTV; Hong Kong Transport Department via DATA.GOV.HK", 3600,
           lambda p: [Part("cameras:tfl", 3600, "TfL", cameras.loader(cameras.TFL, cameras.parse_tfl, "TfL"), _cache),
                      Part("cameras:sg", 3600, "data.gov.sg",
-                          cameras.loader(cameras.SINGAPORE, cameras.parse_singapore, "data.gov.sg"), _cache)]),
+                          cameras.loader(cameras.SINGAPORE, cameras.parse_singapore, "data.gov.sg"), _cache),
+                     Part("cameras:hk", 3600, "the Hong Kong Transport Department",
+                          cameras.text_loader(cameras.HONG_KONG, cameras.parse_hong_kong, "the Hong Kong Transport Department"), _cache)]
+          + [Part(f"cameras:ca{d}", 3600, "Caltrans",
+                  cameras.text_loader(cameras.caltrans_url(d), cameras.parse_caltrans, "Caltrans"), _cache)
+             for d in cameras.CALTRANS_DISTRICTS],
+          cap=cameras.MAX_CAMERAS),
     Layer("chokepoints", "Chokepoints", "Curated", "https://en.wikipedia.org/wiki/Choke_point",
           "Curated by this plugin from public geography", 0,
           lambda p: [Part("chokepoints", 10 ** 9, "the built-in list", lambda: _items(chokepoints.items()), _cache)]),
@@ -251,7 +258,13 @@ def fetch(layer_id: str, query: dict | None = None) -> dict:
     if layer is None:
         raise UpstreamError(404, f"There is no layer called {str(layer_id)[:40]!r}.")
     params = layer.params(query or {})
-    snapshots = [part.cache.fetch(part.key, part.ttl, part.load, source=part.source) for part in layer.parts(params)]
+    parts = layer.parts(params)
+    fetch_part = lambda part: part.cache.fetch(part.key, part.ttl, part.load, source=part.source)
+    if len(parts) > 1:  # parts are independent upstreams (Caltrans alone is twelve slow ones): fetch together
+        with ThreadPoolExecutor(max_workers=min(8, len(parts)), thread_name_prefix="osint-part") as pool:
+            snapshots = list(pool.map(fetch_part, parts))
+    else:
+        snapshots = [fetch_part(part) for part in parts]
     result = combine(snapshots, layer.cap)
     with _health_lock:
         _health[layer.id] = {"status": result["status"], "error": result["error"], "updated": result["updated"],

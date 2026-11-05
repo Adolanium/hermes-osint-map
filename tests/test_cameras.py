@@ -136,3 +136,74 @@ def test_view_names_are_not_mistaken_for_directions():
     cam = cameras.parse_tfl([place])[0]
     assert cam["subtitle"] == "Transport for London"
     assert ("View", "Piccadilly Circus") in [tuple(r) for r in cam["props"]]
+
+
+CALTRANS_CSV = (
+    "index,district,locationName,nearbyPlace,longitude,latitude,direction,route,inService,currentImageURL\n"
+    '1,7,"I-110 : (196) Avenue 26 Off Ramp","Cypress Park",-118.2215,34.0837,South,I-110,true,'
+    "https://cwwp2.dot.ca.gov/data/d7/cctv/image/i110196avenue26offramp/i110196avenue26offramp.jpg\n"
+    "2,7,Offline,Nowhere,-118.2,34.1,North,I-5,false,https://cwwp2.dot.ca.gov/data/d7/cctv/image/off/off.jpg\n"
+    "3,7,Elsewhere,Nowhere,-118.2,34.1,North,I-5,true,https://cwwp2.dot.ca.gov/other/x.jpg\n"
+    "4,7,No position,Nowhere,,,North,I-5,true,https://cwwp2.dot.ca.gov/data/d7/cctv/image/nopos/nopos.jpg\n"
+)
+
+HONG_KONG_XML = """<?xml version="1.0" encoding="UTF-8"?>
+<image-list>
+  <image><key>H429F</key><region>Hong Kong Island</region><district>Southern</district>
+    <description>Aberdeen Praya Road near Fish Market [H429F]</description>
+    <latitude>22.24845</latitude><longitude>114.1505</longitude><url>https://tdcctv.data.one.gov.hk/H429F.JPG</url></image>
+  <image><key>BAD KEY</key><latitude>22.2</latitude><longitude>114.1</longitude><url>https://tdcctv.data.one.gov.hk/x.JPG</url></image>
+  <image><key>K001</key><latitude>22.2</latitude><longitude>114.1</longitude><url>https://evil.example/K001.JPG</url></image>
+</image-list>"""
+
+
+def test_caltrans_keeps_in_service_cameras_in_its_image_folders():
+    found = cameras.parse_caltrans(CALTRANS_CSV)
+    assert [c["id"] for c in found] == ["cameras:ca:d7:i110196avenue26offramp"]
+    cam = found[0]
+    assert cam["country"] == "US" and cam["title"] == "I-110 : (196) Avenue 26 Off Ramp"
+    assert cam["subtitle"] == "Caltrans · Cypress Park · facing south"
+    assert cameras.parse_caltrans("") == []
+
+
+def test_hong_kong_drops_the_key_suffix_and_refuses_odd_keys_and_hosts():
+    found = cameras.parse_hong_kong(HONG_KONG_XML)
+    assert [c["id"] for c in found] == ["cameras:hk:H429F"]
+    assert found[0]["title"] == "Aberdeen Praya Road near Fish Market"
+    assert found[0]["subtitle"] == "Transport Department, Hong Kong · Southern"
+    with pytest.raises(UpstreamError) as err:
+        cameras.parse_hong_kong("<not xml")
+    assert err.value.status == 502
+
+
+def test_text_feeds_serve_frames_with_their_attribution(monkeypatch):
+    class Text:
+        def __init__(self, body):
+            self.body = body
+
+        def text(self):
+            return self.body
+
+    feeds = {cameras.caltrans_url(7): CALTRANS_CSV, cameras.HONG_KONG: HONG_KONG_XML}
+    monkeypatch.setattr(cameras.http, "get", lambda url, source, timeout: Text(feeds[url]))
+    cameras.text_loader(cameras.caltrans_url(7), cameras.parse_caltrans, "Caltrans")()
+    cameras.text_loader(cameras.HONG_KONG, cameras.parse_hong_kong, "HK")()
+    sources = []
+
+    def fetch(url, **kwargs):
+        sources.append(kwargs["source"])
+        return FakeResponse()
+
+    assert "Caltrans" in cameras.frame("cameras:ca:d7:i110196avenue26offramp", fetch=fetch)["attribution"]
+    assert "Hong Kong" in cameras.frame("cameras:hk:H429F", fetch=fetch)["attribution"]
+    assert sources == ["Caltrans", "the Hong Kong Transport Department"]
+
+
+@pytest.mark.parametrize("url,ok", [
+    ("https://cwwp2.dot.ca.gov/data/d7/cctv/image/a/a.jpg", True),
+    ("https://cwwp2.dot.ca.gov/vm/a.jpg", False),
+    ("https://tdcctv.data.one.gov.hk/H429F.JPG", True),
+    ("http://tdcctv.data.one.gov.hk/H429F.JPG", False),
+])
+def test_new_image_hosts(url, ok):
+    assert cameras._image_allowed(url) is ok
