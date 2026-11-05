@@ -335,7 +335,7 @@ export function FeedCard({ controller, settings, rest, onItem, openExternal, ale
 
 // --- Item detail -------------------------------------------------------------------------------
 
-export function ItemPanel({ item, controller, onClose, onCountry, onAsk, onWatch, openExternal }) {
+export function ItemPanel({ item, controller, onClose, onCountry, onAsk, onWatch, onExpandCamera, openExternal }) {
   const now = useNow(1000)
   const layer = layerOf(item.layer)
   const country = item.country ?? (item.lat !== null ? countryAt(item.lat, item.lon)?.code : null)
@@ -359,7 +359,7 @@ export function ItemPanel({ item, controller, onClose, onCountry, onAsk, onWatch
       </div>
       <div className="hom-detail-title">{item.title}</div>
       {item.subtitle ? <div className="hom-soft">{item.subtitle}</div> : null}
-      {item.layer === 'cameras' ? <CameraFrame rest={controller.rest} id={item.id} title={item.title} now={now} /> : null}
+      {item.layer === 'cameras' ? <CameraFrame rest={controller.rest} id={item.id} title={item.title} now={now} onExpand={onExpandCamera ? () => onExpandCamera(item) : null} /> : null}
       <dl className="hom-facts">
         {item.time && item.layer !== 'satellites' ? (
           <>
@@ -414,13 +414,22 @@ export function ItemPanel({ item, controller, onClose, onCountry, onAsk, onWatch
 
 /** A camera's latest still, refreshed every minute while shown. The backend fetches it by camera
  *  id from the operator's image host and hands back a data URL, so the page loads nothing remote. */
-function CameraFrame({ rest, id, title, now }) {
+function CameraFrame({ rest, id, title, now, onExpand }) {
   const { data, error, loading } = useRemote(rest, `/camera/${encodeURIComponent(id)}`, 60_000)
   const captured = data?.captured ?? null
   return (
     <figure className="hom-camera">
       {data?.image ? (
-        <img className="hom-camera-img" src={data.image} alt={`Latest image from ${title}`} />
+        onExpand ? (
+          <button type="button" className="hom-camera-open" onClick={onExpand} aria-label={`Open ${title} large`}>
+            <img className="hom-camera-img" src={data.image} alt={`Latest image from ${title}`} />
+            <span className="hom-camera-expand">
+              <Codicon name="screen-full" /> Expand
+            </span>
+          </button>
+        ) : (
+          <img className="hom-camera-img" src={data.image} alt={`Latest image from ${title}`} />
+        )
       ) : loading ? (
         <div className="hom-skeleton hom-camera-img" />
       ) : (

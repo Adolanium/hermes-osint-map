@@ -82,7 +82,8 @@ Ask for a brief, a region or "show me the Red Sea", and Hermes moves the map whi
 ### Tour, camera wall and vision modes
 
 - **Tour** (`T`) flies through what matters right now: the strongest quake of the last day, the worst disaster alert, a natural event, the most-attacked country, a live traffic camera and the ISS, with a caption and a progress bar at each stop. Every stop comes from the live layers.
-- **Camera wall.** Click a city's camera cluster and its nine nearest cameras open as a live grid, each still refreshing every minute. Click one for its details.
+- **Camera wall.** Click a city's camera cluster and its nine nearest working cameras open as a live grid, each still refreshing every minute. Full screen turns the grid into a control-room view.
+- **Big camera view.** Click any wall tile, or **Expand** on a camera's panel, to open its still large with when it was taken and a countdown to the next one. `←` and `→` step to the next nearest camera (skipping ones that are off), and **Show on map** flies there.
 - **Day and night** (`N`) shades the globe from the real sun position.
 - **Vision** (`V`) cycles night vision, thermal and CRT. Each remaps the globe's colours and adds an overlay.
 - Cyber attacks warm the countries they land in, and significant recent earthquakes keep rippling.

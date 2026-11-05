@@ -448,6 +448,43 @@ ${LAYER_VARS}
 .hom-wall-cap .hom-dot { width: 5px; height: 5px; }
 .hom-wall-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
 .hom-root[data-size="narrow"] .hom-wall { left: 16px; right: 16px; width: auto; }
+/* Full screen wall: the grid takes over the globe area */
+.hom-wall[data-large="true"] { left: 16px; right: 16px; top: 96px; bottom: 82px; width: auto; z-index: 5; }
+.hom-wall[data-large="true"] .hom-wall-grid { flex: 1; min-height: 0; grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.hom-wall[data-large="true"] .hom-wall-tile { aspect-ratio: auto; height: 100%; }
+.hom-wall[data-large="true"] .hom-wall-cap { font-size: 12px; padding: 22px 10px 8px; }
+.hom-wall .hom-card-head .hom-btn[aria-pressed] { margin-left: 4px; }
+
+/* Camera still in the panel: click to open large */
+.hom-camera-open { appearance: none; border: 0; padding: 0; background: none; position: relative; display: block; cursor: zoom-in; border-radius: 8px; }
+.hom-camera-open:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
+.hom-camera-expand {
+  position: absolute; right: 8px; bottom: 8px; display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 6px;
+  background: rgba(0, 0, 0, .62); color: #fff; font-size: 10.5px; font-weight: 600; opacity: .85; transition: opacity .15s;
+}
+.hom-camera-open:hover .hom-camera-expand { opacity: 1; }
+
+/* The big camera view */
+.hom-viewer { position: absolute; inset: 0; z-index: 8; display: flex; align-items: center; justify-content: center; padding: 56px 48px; background: rgba(0, 0, 0, .66); backdrop-filter: blur(6px); animation: hom-fade .2s var(--hom-ease) both; outline: none; }
+@keyframes hom-fade { from { opacity: 0; } to { opacity: 1; } }
+.hom-viewer-frame { margin: 0; width: min(100%, 1400px); height: 100%; max-height: 900px; display: flex; flex-direction: column; overflow: hidden; padding: 0; animation: hom-rise .35s var(--hom-ease) both; }
+.hom-viewer-img { position: relative; flex: 1; min-height: 0; background: #000; }
+.hom-viewer-img img, .hom-viewer-img > div { display: block; width: 100%; height: 100%; object-fit: contain; }
+.hom-viewer-live { position: absolute; left: 12px; top: 12px; display: inline-flex; align-items: center; gap: 7px; padding: 5px 10px; border-radius: 999px; background: rgba(0, 0, 0, .6); color: #fff; font-size: 10.5px; letter-spacing: .14em; }
+.hom-viewer-nav {
+  position: absolute; top: 50%; translate: 0 -50%; width: 40px; height: 64px; display: grid; place-items: center; border: 0; border-radius: 10px;
+  background: rgba(0, 0, 0, .45); color: #fff; cursor: pointer; opacity: .7; transition: opacity .15s, background .15s;
+}
+.hom-viewer-nav:hover, .hom-viewer-nav:focus-visible { opacity: 1; background: rgba(0, 0, 0, .7); }
+.hom-viewer-nav[data-side="left"] { left: 10px; }
+.hom-viewer-nav[data-side="right"] { right: 10px; }
+.hom-viewer-cap { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 6px 18px; padding: 12px 14px; }
+.hom-viewer-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.hom-viewer-title > span:first-child { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hom-viewer-meta { display: flex; gap: 14px; font-size: 11.5px; color: var(--ui-text-secondary); white-space: nowrap; }
+.hom-viewer-actions { display: flex; gap: 6px; }
+.hom-viewer-attr { grid-column: 1 / -1; }
+.hom-root[data-motion="reduced"] .hom-viewer, .hom-root[data-motion="reduced"] .hom-viewer-frame { animation: none; }
 .hom-camera { margin: 0; display: flex; flex-direction: column; gap: 6px; }
 .hom-camera-img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; border: 1px solid var(--hom-line); background: color-mix(in oklab, var(--ui-text-primary) 5%, transparent); }
 .hom-camera-empty { display: grid; place-items: center; padding: 12px; text-align: center; font-size: 11px; color: var(--ui-text-tertiary); }

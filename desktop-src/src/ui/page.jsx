@@ -10,6 +10,7 @@ import { usePrefersReducedMotion, useThrottled } from './kit.jsx'
 import { CountryPanel, FeedCard, ItemPanel, LayersCard, MarketsCard, ReconDrawer, SpaceWeatherCard } from './panels.jsx'
 import { CyberCard, useCyberLayer } from './cyber.jsx'
 import { CameraWall, wallCameras } from './wall.jsx'
+import { CameraViewer, nearestCameras } from './viewer.jsx'
 import { sceneTarget, ShowOverlay, useShowFeed } from './show.jsx'
 import { buildTour, TourCaption, useTour } from './tour.jsx'
 import { WatchDialog, WatchesCard } from './watches.jsx'
@@ -45,6 +46,7 @@ export function OsintPage({ controller, rest, ask, openExternal, host, pending, 
   const [watchDraft, setWatchDraft] = useState(null)
   const [watchesVersion, setWatchesVersion] = useState(0)
   const [wall, setWall] = useState(null)
+  const [viewer, setViewer] = useState(null)
   const [scene, setScene] = useState(null)
   const [tour, setTour] = useState(null)
   const focusRequest = useValue(pending.focus)
@@ -91,6 +93,7 @@ export function OsintPage({ controller, rest, ask, openExternal, host, pending, 
     [controller, sizeClass]
   )
   const clearSelection = useCallback(() => controller.selection.set(null), [controller])
+  const openCamera = useCallback(item => setViewer({ items: nearestCameras(controller.layerItems('cameras'), item), index: 0 }), [controller])
 
   // Hermes's scenes (osint_show): switch what it asked for, fly there, and draw its marks.
   const applyScene = useCallback(
@@ -197,7 +200,8 @@ export function OsintPage({ controller, rest, ask, openExternal, host, pending, 
     if (k >= '1' && k <= String(LAYERS.length)) controller.toggleLayer(LAYERS[Number(k) - 1].id)
     else if (k === 't' || k === 'T') (tour ? endTour() : startTour())
     else if (k === 'Escape') {
-      if (tour) endTour()
+      if (viewer) setViewer(null)
+      else if (tour) endTour()
       else if (scene) clearScene()
       else if (wall) setWall(null)
       else if (recon) setRecon(false)
@@ -297,6 +301,7 @@ export function OsintPage({ controller, rest, ask, openExternal, host, pending, 
             onCountry={selectCountry}
             onAsk={item => ask('item', item)}
             onWatch={item => watchPoint(item.lat, item.lon, placeLabel(item))}
+            onExpandCamera={openCamera}
             openExternal={openExternal}
           />
         ) : selectedCountry ? (
@@ -321,7 +326,17 @@ export function OsintPage({ controller, rest, ask, openExternal, host, pending, 
           rest={rest}
           wall={wall}
           onClose={() => setWall(null)}
-          onOpen={item => {
+          onOpen={openCamera}
+        />
+      ) : null}
+
+      {viewer ? (
+        <CameraViewer
+          rest={rest}
+          viewer={viewer}
+          setViewer={setViewer}
+          onDetails={item => {
+            setViewer(null)
             setWall(null)
             selectItem(item)
           }}

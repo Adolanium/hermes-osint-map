@@ -64,11 +64,12 @@ function Tile({ rest, item, now, onOpen, index, onDown }) {
 
 export function CameraWall({ rest, wall, onClose, onOpen }) {
   const now = useNow(15_000)
+  const [large, setLarge] = useState(false)
   const [down, setDown] = useState(() => new Set())
   const shown = wall.items.filter(i => !down.has(i.id)).slice(0, WALL_SIZE)
   const markDown = id => setDown(prev => (prev.has(id) ? prev : new Set(prev).add(id)))
   return (
-    <section className="hom-panel hom-wall hom-rise" aria-label={`Cameras near ${wall.label}`}>
+    <section className="hom-panel hom-wall hom-rise" data-large={large} aria-label={`Cameras near ${wall.label}`}>
       <div className="hom-card-head">
         <span className="hom-label">
           <Codicon name="device-camera-video" /> {wall.label}
@@ -76,6 +77,9 @@ export function CameraWall({ rest, wall, onClose, onOpen }) {
         <span className="hom-muted hom-num" style={{ fontSize: 10.5 }}>
           {shown.length} of {wall.count} · live stills
         </span>
+        <button type="button" className="hom-btn" aria-pressed={large} onClick={() => setLarge(v => !v)} aria-label={large ? 'Smaller wall' : 'Full screen wall'} title={large ? 'Smaller wall' : 'Full screen wall'}>
+          <Codicon name={large ? 'screen-normal' : 'screen-full'} />
+        </button>
         <button type="button" className="hom-btn" onClick={onClose} aria-label="Close the camera wall">
           <Codicon name="close" />
         </button>
@@ -85,7 +89,7 @@ export function CameraWall({ rest, wall, onClose, onOpen }) {
           <Tile key={item.id} rest={rest} item={item} now={now} onOpen={onOpen} index={i} onDown={markDown} />
         ))}
       </div>
-      <div className="hom-caption">{wall.operator} · official open data · click a camera for its details</div>
+      <div className="hom-caption">{wall.operator} · official open data · click a camera to open it large</div>
     </section>
   )
 }
