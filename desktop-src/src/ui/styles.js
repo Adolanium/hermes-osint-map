@@ -377,6 +377,26 @@ ${LAYER_VARS}
 .hom-root[data-motion="reduced"] *, .hom-root[data-motion="reduced"] *::before, .hom-root[data-motion="reduced"] *::after {
   animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important;
 }
+/* Watches ---------------------------------------------------------------------------------- */
+.hom-watch { width: min(520px, 100%); gap: 12px; max-height: calc(100% - 24px); overflow: auto; }
+.hom-watch-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.hom-watch-head h2 { display: inline-flex; align-items: center; gap: 8px; }
+.hom-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.hom-field .hom-input { flex: none; width: 100%; }
+select.hom-input { appearance: auto; padding-right: 6px; }
+.hom-watch-line { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.hom-watch-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.hom-watch-error { color: var(--hom-bad); font-size: 12px; line-height: 1.45; }
+.hom-watch-list { display: flex; flex-direction: column; gap: 8px; }
+.hom-watch-item { display: flex; flex-direction: column; gap: 3px; padding-top: 8px; border-top: 1px solid var(--hom-line-soft); }
+.hom-watch-item:first-child { border-top: 0; padding-top: 0; }
+.hom-watch-item[data-enabled="false"] { opacity: .6; }
+.hom-watch-row { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto auto; align-items: center; gap: 6px; }
+.hom-watch-row .hom-btn { height: 24px; min-width: 24px; padding: 0 4px; }
+.hom-watch-row .hom-btn[data-danger="true"] { color: var(--hom-bad); }
+.hom-watch-name { text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ui-text-primary); text-decoration: none; font-weight: 500; }
+.hom-watch-alert { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; align-items: center; gap: 6px; font-size: 11px; color: var(--ui-text-secondary); }
+.hom-watch-alert > span:nth-child(2) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (prefers-reduced-motion: reduce) {
   .hom-root *, .hom-root *::before, .hom-root *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
 }

@@ -50,7 +50,8 @@ export const prompts = {
       `Write a region dossier for ${countryName(code)} (${code}).`,
       `Use osint_country("${code}") first, then osint_events and osint_news for context; add web research if you have it.`,
       'Structure: BLUF; current situation; active hazards and incidents (with sources and times); risk assessment with confidence levels;',
-      'a watchlist of indicators for the next week; key facts. Mark anything inferred as such.'
+      'a watchlist of indicators for the next week; key facts. Mark anything inferred as such.',
+      `Finish with this line alone in its own paragraph, so I see a live map of it here: ::osint-map{country="${code}"}`
     ].join(' '),
 
   item: item => {
@@ -62,7 +63,10 @@ export const prompts = {
       facts ? `Facts from the feed: ${facts}.` : '',
       item.url ? `Source: ${item.url}.` : '',
       'Use the osint_map tools (osint_events near that point, osint_news) and web search if available.',
-      'Explain what it is, why it matters, and what is confirmed versus uncertain.'
+      'Explain what it is, why it matters, and what is confirmed versus uncertain.',
+      item.lat !== null
+        ? `Finish with this line alone in its own paragraph, so I see a live map around it here: ::osint-map{lat="${item.lat.toFixed(3)}" lon="${item.lon.toFixed(3)}" radius="400"}`
+        : ''
     ]
       .filter(Boolean)
       .join(' ')

@@ -11,29 +11,50 @@ import { age, fmt, fmtCompact, layerVar, Shape, useNow } from './kit.jsx'
 export function useRemote(rest, path, intervalMs, enabled = true) {
   const [state, setState] = useState({ loading: !!path && enabled, data: null, error: null })
   const alive = useRef(true)
+  const hasData = useRef(false)
   const load = useCallback(async () => {
-    if (!path) return
+    if (!path) return false
     try {
       const answer = await rest(path)
-      if (!alive.current) return
-      if (answer?.ok) setState({ loading: false, data: answer, error: null })
-      else setState(s => ({ loading: false, data: s.data, error: answer?.error ?? 'Unavailable' }))
+      if (!alive.current) return true
+      if (answer?.ok) {
+        hasData.current = true
+        setState({ loading: false, data: answer, error: null })
+        return true
+      }
+      setState(s => ({ loading: false, data: s.data, error: answer?.error ?? 'Unavailable' }))
+      return true // the backend answered: a real error, not a startup race
     } catch (error) {
-      if (alive.current) setState(s => ({ loading: false, data: s.data, error: String(error?.message ?? error) }))
+      if (alive.current) setState(s => ({ loading: false, data: s.data, error: friendlyError(error) }))
+      return false
     }
   }, [rest, path])
   useEffect(() => {
     alive.current = true
     if (!path || !enabled) return undefined
     setState(s => ({ ...s, loading: !s.data }))
-    load()
+    // Hermes mounts a plugin's routes on the first request after a restart, so the very first calls
+    // can 404. Retry a few times quickly instead of waiting a whole refresh interval.
+    const retries = []
+    const attempt = async n => {
+      const answered = await load()
+      if (!answered && !hasData.current && alive.current && n < 4) retries.push(setTimeout(() => attempt(n + 1), 1500 * 2 ** n))
+    }
+    attempt(0)
     const id = intervalMs ? setInterval(load, intervalMs) : null
     return () => {
       alive.current = false
+      retries.forEach(clearTimeout)
       if (id) clearInterval(id)
     }
   }, [path, enabled, intervalMs, load])
   return { ...state, reload: load }
+}
+
+function friendlyError(error) {
+  const text = String(error?.message ?? error ?? '')
+  if (/^404\b|not found/i.test(text)) return 'The OSINT Map backend is still starting. Retrying…'
+  return text
 }
 
 const STATUS_TONE = { ok: 'live', stale: 'warn', error: 'bad', idle: 'idle', disabled: 'idle', loading: 'idle' }
@@ -314,7 +335,7 @@ export function FeedCard({ controller, settings, rest, onItem, openExternal, ale
 
 // --- Item detail -------------------------------------------------------------------------------
 
-export function ItemPanel({ item, controller, onClose, onCountry, onAsk, openExternal }) {
+export function ItemPanel({ item, controller, onClose, onCountry, onAsk, onWatch, openExternal }) {
   const now = useNow(1000)
   const layer = layerOf(item.layer)
   const country = item.country ?? (item.lat !== null ? countryAt(item.lat, item.lon)?.code : null)
@@ -371,6 +392,11 @@ export function ItemPanel({ item, controller, onClose, onCountry, onAsk, openExt
         <button type="button" className="hom-btn hom-btn--primary" onClick={() => onAsk(item)}>
           <Codicon name="sparkle" /> Ask Hermes
         </button>
+        {onWatch && item.lat !== null && item.layer !== 'satellites' && item.layer !== 'aircraft' ? (
+          <button type="button" className="hom-btn hom-btn--ghost" onClick={() => onWatch(item)}>
+            <Codicon name="eye" /> Watch around here
+          </button>
+        ) : null}
         {item.url ? (
           <button type="button" className="hom-btn hom-btn--ghost" onClick={() => openExternal(item.url)}>
             <Codicon name="link-external" /> Source
@@ -422,7 +448,7 @@ function FactRow({ label, value }) {
 
 // --- Country dossier ---------------------------------------------------------------------------
 
-export function CountryPanel({ code, controller, rest, onClose, onItem, onAsk, openExternal }) {
+export function CountryPanel({ code, controller, rest, onClose, onItem, onAsk, onWatch, openExternal }) {
   const name = countryName(code)
   const facts = useRemote(rest, `/country/${code}`, 0)
   const news = useRemote(rest, `/news?q=${encodeURIComponent(name)}&limit=8`, 10 * 60_000)
@@ -524,6 +550,11 @@ export function CountryPanel({ code, controller, rest, onClose, onItem, onAsk, o
         <button type="button" className="hom-btn hom-btn--primary" onClick={() => onAsk(code)}>
           <Codicon name="sparkle" /> Ask Hermes for a dossier
         </button>
+        {onWatch ? (
+          <button type="button" className="hom-btn hom-btn--ghost" onClick={() => onWatch(code)}>
+            <Codicon name="eye" /> Watch {name}
+          </button>
+        ) : null}
       </div>
     </section>
   )

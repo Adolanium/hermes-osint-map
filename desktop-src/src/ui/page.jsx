@@ -8,12 +8,24 @@ import { createGlobe } from '../globe/globe.js'
 import { buildPalette, createColorResolver } from '../globe/palette.js'
 import { usePrefersReducedMotion, useThrottled } from './kit.jsx'
 import { CountryPanel, FeedCard, ItemPanel, LayersCard, MarketsCard, ReconDrawer, SpaceWeatherCard } from './panels.jsx'
+import { WatchDialog, WatchesCard } from './watches.jsx'
 import { CSS } from './styles.js'
 
 const QUIET_LAYERS = new Set(['aircraft', 'satellites', 'chokepoints', 'cameras'])
 const HEAT_LAYERS = new Set(['incidents', 'disasters', 'quakes'])
 
-export function OsintPage({ controller, rest, ask, openExternal }) {
+/** Camera distance (globe radii from the centre) that frames an area of `radiusKm`. */
+/** A short place name for a watch started from an item: its place line, else its country. */
+function placeLabel(item) {
+  const place = item.props?.find(([k]) => k === 'Place')?.[1] ?? item.subtitle?.split(' · ')[0] ?? null
+  if (place && place.length <= 60 && !/\d+ reports?/.test(place)) return place
+  if (item.country) return `Around ${countryName(item.country)}`
+  return ''
+}
+
+export const distFor = radiusKm => Math.min(3.2, 1.4 + ((radiusKm ?? 800) / 6371) * 4.5)
+
+export function OsintPage({ controller, rest, ask, openExternal, host, pending, notify }) {
   const rootRef = useRef(null)
   const globeRef = useRef(null)
   const settings = useValue(controller.settings)
@@ -26,6 +38,10 @@ export function OsintPage({ controller, rest, ask, openExternal }) {
   const [openRail, setOpenRail] = useState(null)
   const [recon, setRecon] = useState(false)
   const [contextLost, setContextLost] = useState(null)
+  const [watchDraft, setWatchDraft] = useState(null)
+  const [watchesVersion, setWatchesVersion] = useState(0)
+  const focusRequest = useValue(pending.focus)
+  const watchRequest = useValue(pending.watchRequest)
 
   useEffect(() => controller.attach(), [controller])
 
@@ -66,6 +82,47 @@ export function OsintPage({ controller, rest, ask, openExternal }) {
     [controller, sizeClass]
   )
   const clearSelection = useCallback(() => controller.selection.set(null), [controller])
+
+  // A chat map card asked to open the map on an area: fly there once the globe is up.
+  useEffect(() => {
+    if (!focusRequest) return undefined
+    let tries = 0
+    let id = 0
+    const go = () => {
+      const g = globeRef.current
+      if (!g) {
+        if (tries++ < 60) id = requestAnimationFrame(go)
+        return
+      }
+      pending.focus.set(null)
+      const item = focusRequest.item ? controller.item(focusRequest.item) : null
+      if (item) selectItem(item)
+      else if (focusRequest.country && (focusRequest.lat === null || focusRequest.lat === undefined || !focusRequest.radiusKm)) selectCountry(focusRequest.country)
+      if (focusRequest.lat !== null && focusRequest.lat !== undefined) g.flyTo(focusRequest.lat, focusRequest.lon, distFor(focusRequest.radiusKm))
+    }
+    go()
+    return () => cancelAnimationFrame(id)
+  }, [focusRequest, pending, controller, selectItem, selectCountry])
+
+  // ...or to start a watch.
+  useEffect(() => {
+    if (!watchRequest) return
+    pending.watchRequest.set(null)
+    setWatchDraft({ lat: watchRequest.lat ?? null, lon: watchRequest.lon ?? null, radiusKm: watchRequest.radiusKm ?? 500,
+      country: watchRequest.radiusKm ? null : watchRequest.country, label: watchRequest.label ?? '' })
+  }, [watchRequest, pending])
+
+  const watchPoint = useCallback((lat, lon, label, radiusKm = 500) => setWatchDraft({ lat, lon, radiusKm, country: null, label }), [])
+  const watchCountry = useCallback(code => setWatchDraft({ lat: null, lon: null, radiusKm: null, country: code, label: countryName(code) }), [])
+  const showArea = useCallback(
+    area => {
+      const g = globeRef.current
+      if (!g) return
+      if (area.lat !== null && area.lat !== undefined) g.flyTo(area.lat, area.lon, distFor(area.radius_km))
+      else if (area.country) selectCountry(area.country)
+    },
+    [selectCountry]
+  )
 
   const onPick = useCallback(
     target => {
@@ -130,6 +187,7 @@ export function OsintPage({ controller, rest, ask, openExternal }) {
         ) : (
           <>
             <LayersCard controller={controller} settings={settings} registry={registry} />
+            <WatchesCard host={host} rest={rest} version={watchesVersion} onShow={showArea} notify={notify} />
             <SpaceWeatherCard rest={rest} />
             <MarketsCard rest={rest} />
           </>
@@ -145,6 +203,7 @@ export function OsintPage({ controller, rest, ask, openExternal }) {
             onClose={clearSelection}
             onCountry={selectCountry}
             onAsk={item => ask('item', item)}
+            onWatch={item => watchPoint(item.lat, item.lon, placeLabel(item))}
             openExternal={openExternal}
           />
         ) : selectedCountry ? (
@@ -156,6 +215,7 @@ export function OsintPage({ controller, rest, ask, openExternal }) {
             onClose={clearSelection}
             onItem={selectItem}
             onAsk={code => ask('country', code)}
+            onWatch={watchCountry}
             openExternal={openExternal}
           />
         ) : null}
@@ -201,6 +261,21 @@ export function OsintPage({ controller, rest, ask, openExternal }) {
           <GlyphSpinner ariaLabel="Loading" />
           <span>Connecting to the data sources…</span>
         </div>
+      ) : null}
+
+      {watchDraft ? (
+        <WatchDialog
+          key={`${watchDraft.lat}:${watchDraft.lon}:${watchDraft.country}`}
+          draft={watchDraft}
+          host={host}
+          rest={rest}
+          onClose={() => setWatchDraft(null)}
+          onCreated={spec => {
+            setWatchDraft(null)
+            setWatchesVersion(v => v + 1)
+            notify?.(`Watching ${spec.label}. The first check records what is already there.`)
+          }}
+        />
       ) : null}
 
       {contextLost ? (
