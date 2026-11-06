@@ -192,7 +192,7 @@ export function OsintPage({ controller, rest, ask, openExternal, host, pending, 
   )
 
   function onKeyDown(e) {
-    if (e.target instanceof HTMLElement && e.target.closest('input, textarea, [contenteditable="true"]')) return
+    if (e.target instanceof HTMLElement && e.target.closest('input, textarea, select, [contenteditable="true"]')) return
     if (e.metaKey || e.ctrlKey || e.altKey) return
     const g = globeRef.current
     const k = e.key
