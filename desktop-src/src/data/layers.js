@@ -131,7 +131,7 @@ export function clusterItems(items, radiusKm = 150) {
     const lon = cell.lon / count
     const operator = first.subtitle?.split(' · ')[0] ?? layerOf(first.layer).label
     const label = `${count} ${layerOf(first.layer).label.toLowerCase()}`
-    clusters.set(id, { lat, lon, count, label: `${label} · ${operator}` })
+    clusters.set(id, { lat, lon, count, country: first.country ?? null, label: `${label} · ${operator}` })
     out.push({ ...first, id, lat, lon, title: label, subtitle: operator, severity: Math.min(1, 0.35 + Math.log10(count) / 3), count, cluster: true })
   }
   return { items: out, clusters }
