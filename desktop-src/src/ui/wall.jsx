@@ -5,9 +5,10 @@ import { Codicon } from '@hermes/plugin-sdk'
 import { useRemote } from './panels.jsx'
 import { age, useNow } from './kit.jsx'
 import { ClipVideo, useCameraClip } from './clip.jsx'
+import { wallCameras } from '../data/cameras.js'
 
 export const WALL_SIZE = 9
-const POOL_SIZE = 30 // candidates, so cameras that are down can be swapped for the next nearest
+export { wallCameras } // page.jsx imports it from here; the helper lives with nearestCameras
 
 /** True for an operator's "camera unavailable" card: an image that is mostly one flat colour
  *  (Caltrans's white card, TfL's grey "camera in use" card). Each one differs slightly, so they
@@ -39,17 +40,6 @@ export function looksUnavailable(src) {
     img.onerror = () => resolve(false)
     img.src = src
   })
-}
-
-/** The cluster's cameras nearest its centre, so the wall shows one neighbourhood. */
-export function wallCameras(items, center, n = POOL_SIZE) {
-  const cos = Math.cos((center.lat * Math.PI) / 180)
-  return items
-    .filter(i => i.layer === 'cameras' && i.lat !== null)
-    .map(i => ({ item: i, d: (i.lat - center.lat) ** 2 + (((((i.lon - center.lon + 540) % 360) - 180) * cos) ** 2) }))
-    .sort((a, b) => a.d - b.d)
-    .slice(0, n)
-    .map(x => x.item)
 }
 
 function Tile({ rest, item, now, onOpen, index, onDown }) {
@@ -97,6 +87,11 @@ export function CameraWall({ rest, wall, onClose, onOpen }) {
         {shown.map((item, i) => (
           <Tile key={item.id} rest={rest} item={item} now={now} onOpen={onOpen} index={i} onDown={markDown} />
         ))}
+        {shown.length ? null : (
+          <div className="hom-camera-empty" style={{ gridColumn: '1 / -1', padding: '28px 8px' }}>
+            No images from this operator right now
+          </div>
+        )}
       </div>
       <div className="hom-caption">{wall.operator} · official open data · click a camera to open it large</div>
     </section>

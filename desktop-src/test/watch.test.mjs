@@ -28,7 +28,8 @@ test('page jobs match by id; chat-made jobs match by label; other jobs are ignor
 
 test('the big camera view steps through the nearest cameras, the opened one first', async () => {
   const { nearestCameras } = await import('../src/data/cameras.js')
-  const cam = (id, lat, lon, extra = {}) => ({ id, layer: 'cameras', lat, lon, ...extra })
+  // Real camera ids carry their operator ("cameras:<source>:<key>"), and the step stays inside it.
+  const cam = (id, lat, lon, extra = {}) => ({ id: `cameras:ca:${id}`, layer: 'cameras', lat, lon, country: 'US', ...extra })
   const items = [cam('far', 35.0, -118.0), cam('near', 34.06, -118.24), cam('origin', 34.05, -118.25), cam('cluster', 34.05, -118.25, { cluster: true }), { id: 'q', layer: 'quakes', lat: 34, lon: -118 }]
-  assert.deepEqual(nearestCameras(items, items[2]).map(i => i.id), ['origin', 'near', 'far'])
+  assert.deepEqual(nearestCameras(items, items[2]).map(i => i.id), ['cameras:ca:origin', 'cameras:ca:near', 'cameras:ca:far'])
 })
