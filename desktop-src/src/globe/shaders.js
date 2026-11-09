@@ -277,6 +277,11 @@ float shapeNorm(vec2 p, int s) {
     return max(q.x * 0.866 + q.y * 0.5, q.y) * 1.12;
   }
   if (s == 8) return max(abs(p.x), abs(p.y)) * 1.15;                                // 8: frame (hollow square)
+  if (s == 9) {                                                                     // 9: star (operator feeds)
+    float a = atan(p.y, p.x) - 1.5707963;                                           // one point straight up
+    float k = 0.5 + 0.5 * cos(5.0 * a);                                             // five lobes, 0 at a valley
+    return length(p) / mix(0.42, 1.0, pow(k, 1.6)) * 0.9;
+  }
   return length(p);                                                                 // 7: ring (drawn hollow)
 }
 

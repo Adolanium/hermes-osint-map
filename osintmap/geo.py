@@ -9,6 +9,7 @@ up in those feeds; anything else maps to ``None`` rather than a guess.
 from __future__ import annotations
 
 import math
+import re
 from typing import Iterable
 
 # iso2 iso3 fips name
@@ -339,6 +340,37 @@ def from_place(place: object) -> str | None:
 
 def name(code: str | None) -> str | None:
     return NAMES.get(code) if code else None
+
+
+_PHRASES: list[tuple[str, str]] | None = None
+
+
+def _phrases() -> list[tuple[str, str]]:
+    """Every name and alias as (lowercased phrase, alpha-2), longest first."""
+    global _PHRASES
+    if _PHRASES is None:
+        pairs = dict(_NAMES)
+        pairs.update(_ALIASES)
+        _PHRASES = sorted(pairs.items(), key=lambda item: -len(item[0]))
+    return _PHRASES
+
+
+def country_in(text_value: object, *, min_len: int = 4) -> str | None:
+    """The first country named in a sentence → alpha-2, or None.
+
+    Longest name first, so "democratic republic of the congo" is not read as "congo"; names shorter
+    than ``min_len`` are skipped so "us" or "in" never match. Deliberately rough — a caller placing
+    a marker with this must label the result approximate, and this never turns a name into geometry.
+    """
+    if not isinstance(text_value, str) or not text_value.strip():
+        return None
+    hay = " " + " ".join(text_value.lower().split()) + " "
+    for phrase, code in _phrases():
+        if len(phrase) < min_len:
+            continue
+        if re.search(rf"(?<![a-z]){re.escape(phrase)}(?![a-z])", hay):
+            return code
+    return None
 
 
 # --- Geometry --------------------------------------------------------------------------------------

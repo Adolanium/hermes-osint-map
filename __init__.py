@@ -18,6 +18,12 @@ def register(ctx: Any) -> None:
     # never needs the plugin's relative imports to resolve.
     from .osintmap.tools import EMOJI, HANDLERS, SCHEMAS, TOOLSET, bind_state
 
+    # The "Operator feeds" layer reads the plugin's own "feeds" setting through this context.
+    from .osintmap import feeds
+    get_config = getattr(ctx, "get_config", None)
+    if callable(get_config):
+        feeds.use_settings(get_config)
+
     # Watches remember what they already reported in Hermes's own plugin state.
     state = getattr(ctx, "state", None)
     if state is not None:

@@ -7,6 +7,8 @@ those change year to year and this list has no source that keeps them current.
 
 from __future__ import annotations
 
+import re
+
 from .parsers import item
 
 # id, name, kind, lat, lon, country (when one state holds both shores), connects, borders, note, wiki
@@ -43,6 +45,42 @@ _POINTS = [
     ("magellan", "Strait of Magellan", "strait", -53.5, -70.5, "CL", "Atlantic Ocean and Pacific Ocean", "Chile",
      "Sheltered passage around South America, south of the mainland.", "Strait_of_Magellan"),
 ]
+
+
+# The names headlines actually use, mapped to the rows above. Matched longest-first so
+# "strait of hormuz" is preferred over "hormuz". Bare country/city words ("panama", "suez") are
+# deliberately absent: only a passage name places a marker.
+_ALIASES = {
+    "hormuz": "hormuz", "strait of hormuz": "hormuz",
+    "bab-el-mandeb": "bab-el-mandeb", "bab el-mandeb": "bab-el-mandeb", "bab el mandeb": "bab-el-mandeb",
+    "suez canal": "suez", "suez": "suez",
+    "malacca": "malacca", "strait of malacca": "malacca",
+    "panama canal": "panama",
+    "bosporus": "bosporus", "bosphorus": "bosporus",
+    "gibraltar": "gibraltar", "strait of gibraltar": "gibraltar",
+    "dover": "dover", "strait of dover": "dover",
+    "taiwan strait": "taiwan",
+    "lombok": "lombok", "lombok strait": "lombok",
+    "danish straits": "danish-straits", "oresund": "danish-straits", "øresund": "danish-straits",
+    "cape of good hope": "good-hope",
+    "kerch": "kerch", "kerch strait": "kerch",
+    "sunda": "sunda", "sunda strait": "sunda",
+    "magellan": "magellan", "strait of magellan": "magellan",
+}
+
+
+def find(text_value: object) -> tuple[str, str, float, float] | None:
+    """The first chokepoint named in a sentence → (id, name, lat, lon), or None."""
+    if not isinstance(text_value, str) or not text_value.strip():
+        return None
+    hay = " " + " ".join(text_value.lower().split()) + " "
+    for alias in sorted(_ALIASES, key=len, reverse=True):
+        if re.search(rf"(?<![a-z]){re.escape(alias)}(?![a-z])", hay):
+            wanted = _ALIASES[alias]
+            for key, name, _kind, lat, lon, *_rest in _POINTS:
+                if key == wanted:
+                    return key, name, lat, lon
+    return None
 
 
 def items() -> list[dict]:

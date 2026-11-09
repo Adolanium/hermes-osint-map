@@ -45,6 +45,7 @@ Every source is public and needs no account. The page's "Brief me", "Ask Hermes"
 | Satellites | ✚ plus | CelesTrak elements, positions computed live (SGP4) | 1 s |
 | Traffic cameras | ▢ frame | About 5,000 official open-data cameras: Transport for London JamCams (live video clips), Caltrans (California highways), Hong Kong Transport Department, Singapore LTA (data.gov.sg) | London: a new 10 s video clip every few minutes; elsewhere stills every 1–2 minutes |
 | Chokepoints | ○ ring | Curated straits and canals | static |
+| Your own feeds (off by default) | ★ star | The RSS/Atom feeds and JSON digest files you name in the plugin's `feeds` setting | per source, 10 min by default |
 | Cyber attacks (opt-in) | arcs: ◆ exploit, ● malware, ▲ phishing | Check Point ThreatCloud live map feed (unofficial) | live |
 
 | | |
@@ -114,6 +115,7 @@ The Watches card on the page lists every watch with its last check and latest al
 - A source that fails keeps serving its last good data, marked stale, and is left alone for a while before the next try.
 - adsb.lol requests are spaced out and retried once after a rate limit.
 - Headline search matches every word in any order.
+- Your own feeds are drawn coarsely on purpose: an item sits at the chokepoint it names, else at its country's label point (marked approximate), and an item that names neither is dropped and counted rather than guessed. The plugin contacts only the hosts you list.
 - Traffic cameras come only from official open-data feeds. They cluster into one marker per city until you zoom in, and a camera's still is fetched by its id from the operator's own image host, never from an address the page supplies.
 - Recon lookups that connect to a host refuse private, loopback, link-local and other internal addresses, before and after redirects.
 - News incidents are machine-coded from news coverage. The page and the tools say so; they show where reporting is, not verified events. Their titles come from the source article's URL slug when one is readable, and fall back to the place name when it is not.
@@ -134,6 +136,24 @@ Hermes OSINT Map needs Hermes Agent 0.22.2 or later.
 ### Add markets (optional)
 
 The markets panel shows crypto out of the box. Add a free [Twelve Data](https://twelvedata.com) key as `TWELVEDATA_API_KEY` in the plugin's settings to add defense stocks, energy, metals and the S&P 500. The plugin reads it only through Hermes's secret scope, so each profile keeps its own key.
+
+### Add your own feeds (optional)
+
+The **Your own feeds** layer draws sources that are yours, not this plugin's, and stays off until you name one in the plugin's `feeds` setting (Settings → Plugins → OSINT Map):
+
+```json
+[{"url": "https://example.com/world.xml", "label": "Example world"},
+ {"file": "/Users/me/.hermes/state/digest.json", "label": "Morning digest", "country": "US"}]
+```
+
+An entry takes a `url` (RSS 2.0, RSS 1.0 or Atom — the same reader as the headlines panel) or a `file` (a JSON digest), plus an optional `label`, a fallback `country` (ISO alpha-2) and `ttl` in seconds. A digest file is any JSON object with an `items` list, so a scheduled job or a mail rule can write one without knowing anything about this plugin:
+
+```json
+{"version": 1, "items": [{"title": "…", "url": "https://…", "summary": "…",
+                          "country": "SA", "severity": 0.7, "time": "2026-11-09T16:17:53Z"}]}
+```
+
+Placement is coarse by design: the item's `place` (a chokepoint this plugin already knows) or a chokepoint named in its text, else its `country` — drawn at that country's label point and marked approximate. `lat`/`lon` are used verbatim when an item carries them. Anything else is dropped and counted in `dropped`, never guessed.
 
 ### Keys
 
@@ -161,7 +181,7 @@ Hermes gateway  →  public data sources (fixed hosts, cached)  →  the globe, 
 ```
 
 - **What leaves your machine.** Requests to the public sources below, identified as `hermes-osint-map`. Recon lookups send the domain, IP, CVE, GitHub name or MAC prefix you enter to the matching public service. TLS and header lookups connect to the host you name.
-- **Who it talks to.** USGS, NASA EONET, GDACS, the National Weather Service, GDELT, adsb.lol, CelesTrak, NOAA SWPC, Transport for London (api.tfl.gov.uk and its JamCams image bucket), data.gov.sg (Singapore traffic images), Caltrans (cwwp2.dot.ca.gov), the Hong Kong Transport Department (static.data.gov.hk and tdcctv.data.one.gov.hk), the World Bank, the BBC/Al Jazeera/DW/Guardian/France 24 RSS feeds, CoinGecko, and Twelve Data if you add a key. Recon uses Google Public DNS, rdap.org, crt.sh, CIRCL CVE, CISA KEV, ipwho.is, GitHub and MacVendors. Only the first three octets of a MAC address are sent.
+- **Who it talks to.** USGS, NASA EONET, GDACS, the National Weather Service, GDELT, adsb.lol, CelesTrak, NOAA SWPC, Transport for London (api.tfl.gov.uk and its JamCams image bucket), data.gov.sg (Singapore traffic images), Caltrans (cwwp2.dot.ca.gov), the Hong Kong Transport Department (static.data.gov.hk and tdcctv.data.one.gov.hk), the World Bank, the BBC/Al Jazeera/DW/Guardian/France 24 RSS feeds, CoinGecko, and Twelve Data if you add a key. The feeds layer contacts only the hosts you list; digest files are read from disk and never leave the machine. Recon uses Google Public DNS, rdap.org, crt.sh, CIRCL CVE, CISA KEV, ipwho.is, GitHub and MacVendors. Only the first three octets of a MAC address are sent.
 - **Cyber attacks (off until you turn it on).** The layer reads `threatmap-api.checkpoint.com`, the feed behind Check Point's public map at threatmap.checkpoint.com. It is not a documented or offered API. The gateway opens one stream while a page shows the layer and closes it about 45 seconds after the page stops asking. Nothing about you is sent beyond the request itself.
 - **Your key.** The optional Twelve Data key is sent to Twelve Data in a request header, never in a URL, and never logged or echoed in errors.
 - **Watches.** Each watch is a Hermes scheduled job you create and can remove. Every check is one short model call with your default model, plus the same public-source requests the page makes. A watch's state (its area, rules, the last 2,000 event ids it has seen and its last 20 alerts) lives in the plugin's own Hermes state file under `plugin-data`. Alerts go only to the destination you picked.

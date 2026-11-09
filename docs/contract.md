@@ -62,8 +62,43 @@ are plain text (the page escapes nothing; never return HTML).
 | `satellites` | Satellites | CelesTrak `gp.php?GROUP=…&FORMAT=json` for groups `stations`, `gps-ops`, `weather`, `military`? (only groups that exist; ≤ 400 objects total) | group name | 6 h | **items carry `omm` (the raw CelesTrak OMM dict) and lat/lon null**; the page propagates with SGP4 |
 | `incidents` | News incidents | GDELT 2.0 events: `lastupdate.txt` → latest `export.CSV.zip`; keep a rolling 3 h window (12 files) | CAMEO root: `protest`, `force`, `assault`, `fight`, `mass-violence`, `coerce`, `threaten` | 15 min | only QuadClass 3/4 roots 13–15, 17–20; aggregate same ActionGeo point+root into one item with `count`; title = the root label plus a headline read from the article URL slug (e.g. "Fight · Buses vandalized with swastikas antisemitic vitriol outside nyc yeshiva cops"), falling back to the place name when no slug is readable (e.g. "Fight · Kharkiv, Ukraine"); when a headline exists the place goes in the subtitle instead; url = a SOURCEURL; severity from mentions + Goldstein; one article double-coded under two roots at the same point collapses into the stronger item, which gains an `Also coded` prop naming the dropped root (so item count is not 1:1 with place+root groups; the survivor keeps its own `incidents:{root}:{lat},{lon}` id); `Place precision` (e.g. `Country only`) flags centroid-grade geometry and is emitted high in `props` so the 8-prop cap trims `Actors`, never this flag |
 | `chokepoints` | Chokepoints | static curated list in code (≈ 15: Hormuz, Bab-el-Mandeb, Suez, Malacca, Panama, Bosporus, Gibraltar, Dover, Taiwan Strait, Lombok, Danish straits, Cape of Good Hope, Kerch, Sunda, Magellan) | `strait`, `canal` | static | props: what passes through (plain facts, no numbers you can't source) |
+| `feeds` | Operator feeds | the operator's own sources, set in the plugin setting `feeds` (RSS/Atom `url` or JSON digest `file`) | `headline` (RSS/Atom), `digest` (or the item's own `tag`) | per source, 10 min default, 60 s–24 h | **never contacts a host the operator did not name**; an item is placed at a chokepoint it names (or its own `place`), else at its country (`country` field, else a country named in its text) and the page draws it at that country's label point — an approximate anchor; an item with neither is dropped and counted in `dropped`; `disabled` with a sentence when no source is configured |
 
 Layer-specific query params are validated (floats in range, radius clamp) and are part of the cache key.
+
+## Operator feeds
+
+The one layer whose sources belong to the operator, not to this plugin. It stays `disabled` until the
+plugin setting `feeds` is set (Settings → Plugins → OSINT Map, or
+`hermes config set plugins.entries.hermes-osint-map.settings.feeds '<json>'`):
+
+```json
+[{"url": "https://example.com/world.xml", "label": "Example world"},
+ {"file": "/Users/me/.hermes/state/digest.json", "label": "Morning digest", "country": "US"}]
+```
+
+Each entry takes `url` (RSS 2.0, RSS 1.0/RDF or Atom, parsed by the same reader as `/news`) or `file`
+(a JSON digest), plus optional `label` (defaults to the host or file name), `country` (alpha-2, the
+fallback for items that name none) and `ttl` (seconds, clamped 60–86400, default 600). Up to 12
+sources; up to 200 items per source. A digest file is any JSON object with an `items` list — the shape
+a scheduled job or a mail rule can write without knowing anything about this plugin:
+
+```json
+{"version": 1, "updated": "2026-11-09T16:17:53Z",
+ "items": [{"title": "…", "url": "https://…", "summary": "…", "country": "SA",
+            "place": "Strait of Hormuz", "severity": 0.7, "time": "2026-11-09T16:17:53Z"}]}
+```
+
+Placement, in order: the item's `place` (a chokepoint this plugin already knows, by name), then a
+chokepoint named in its text, then its `country` (or a country named in its text), which the page
+draws at that country's label point. `lat`/`lon` are accepted verbatim when present and are the only
+exact anchors. Nothing is inferred beyond a name match, and a name match is never reported as a
+location: country-only items carry `approx: true` on the page, and their props say `approx.`. Anything
+unanchored is dropped and counted, never guessed.
+
+One broken source only sets the layer `stale` with that source's sentence — the others still draw,
+because each source is its own cache part.
+
 
 ## Panels
 

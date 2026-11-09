@@ -45,11 +45,24 @@ test('toItem keeps a valid item and sanitizes the rest', () => {
 })
 
 test('toItem rejects items it cannot place, unless they carry orbital elements', () => {
-  assert.equal(toItem(raw({ lat: null }), 'quakes'), null)
-  assert.equal(toItem(raw({ lat: 95 }), 'quakes'), null)
+  assert.equal(toItem(raw({ lat: null, country: null }), 'quakes'), null)
+  assert.equal(toItem(raw({ lat: 95, country: null }), 'quakes'), null)
   assert.equal(toItem({ ...raw(), id: 5 }, 'quakes'), null)
   assert.equal(toItem(null, 'quakes'), null)
+  assert.equal(toItem(raw({ lat: null, lon: null, country: null, omm: null }), 'quakes'), null)
   assert.ok(toItem(raw({ lat: null, lon: null, omm: { OBJECT_NAME: 'X' } }), 'satellites'))
+})
+
+test('a country-only item is drawn at its country label point and flagged approximate', () => {
+  const item = toItem(raw({ lat: null, lon: null, country: 'JP' }), 'feeds')
+  assert.ok(item, 'a country is enough to place an item')
+  assert.equal(item.approx, true)
+  assert.equal(item.country, 'JP')
+  assert.ok(Math.abs(item.lat) < 90 && Math.abs(item.lon) <= 180)
+  // An item with its own coordinates is never flagged: those are the source's own numbers.
+  assert.equal(toItem(raw(), 'feeds').approx, false)
+  // An unknown country is not a place.
+  assert.equal(toItem(raw({ lat: null, lon: null, country: 'ZZ' }), 'feeds'), null)
 })
 
 test('old events fade toward a floor but never disappear; ongoing layers never fade', () => {
@@ -73,7 +86,7 @@ test('toMarker sizes by severity and dims civil aircraft', () => {
   const civ = toMarker(toItem(raw({ id: 'aircraft:b', kind: 'civil', heading: 90, time: null }), 'aircraft'), now)
   assert.ok(civ.alpha < mil.alpha)
   assert.equal(mil.heading, 90)
-  assert.equal(toMarker(toItem(raw({ lat: null, lon: null, omm: {} }), 'satellites'), now), null)
+  assert.equal(toMarker(toItem(raw({ lat: null, lon: null, country: null, omm: {} }), 'satellites'), now), null)
 })
 
 test('satellites propagate from CelesTrak elements (ISS fixture)', () => {

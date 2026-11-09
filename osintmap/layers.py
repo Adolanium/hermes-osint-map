@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Callable
 
-from . import cameras, chokepoints, gdelt, http, parsers
+from . import cameras, chokepoints, feeds, gdelt, http, parsers
 from .http import SnapshotCache, UpstreamError
 
 USGS_DAY = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson"
@@ -60,6 +60,9 @@ class Layer:
     params: Callable[[dict], dict] = field(default=lambda query: {})
     cap: int = MAX_ITEMS
     needs_key: str | None = None
+    # Why the layer cannot draw right now (an unset setting, say) → the contract's ``disabled``
+    # status. None means configured; the layer is asked only when it has a callable.
+    unavailable: Callable[[], str | None] | None = None
 
 
 _cache = SnapshotCache(size=96)
@@ -181,6 +184,13 @@ def _aircraft_parts(params: dict) -> list[Part]:
     return parts
 
 
+def _feeds_parts(_params: dict) -> list[Part]:
+    """One part per operator source, so one broken feed never darkens the others."""
+    return [Part(f"feeds:{feeds.key(spec)}", spec["ttl"], spec["label"],
+                 lambda spec=spec: feeds.load(spec), _cache)
+            for spec in feeds.specs()]
+
+
 LAYERS: dict[str, Layer] = {layer.id: layer for layer in (
     Layer("quakes", "Earthquakes", "USGS", "https://earthquake.usgs.gov", "USGS (public domain)", 60,
           lambda p: [Part("quakes:day", 60, "USGS", _usgs(USGS_DAY), _cache),
@@ -215,6 +225,10 @@ LAYERS: dict[str, Layer] = {layer.id: layer for layer in (
     Layer("chokepoints", "Chokepoints", "Curated", "https://en.wikipedia.org/wiki/Choke_point",
           "Curated by this plugin from public geography", 0,
           lambda p: [Part("chokepoints", 10 ** 9, "the built-in list", lambda: _items(chokepoints.items()), _cache)]),
+    Layer("feeds", "Operator feeds", "Your feeds", "",
+          "Operator-configured: the RSS/Atom sources and digest files named in OSINT_MAP_FEEDS",
+          feeds.DEFAULT_TTL, _feeds_parts, cap=feeds.MAX_SOURCES * feeds.MAX_ITEMS_PER_SOURCE,
+          needs_key=feeds.ENV, unavailable=feeds.missing),
 )}
 
 
@@ -257,6 +271,11 @@ def fetch(layer_id: str, query: dict | None = None) -> dict:
     layer = LAYERS.get(layer_id)
     if layer is None:
         raise UpstreamError(404, f"There is no layer called {str(layer_id)[:40]!r}.")
+    why = layer.unavailable() if layer.unavailable else None
+    if why:  # an unconfigured layer is not a failure: report the contract's ``disabled`` status
+        with _health_lock:
+            _health[layer.id] = {"status": "disabled", "error": why, "updated": None, "count": 0}
+        return {"id": layer.id, "count": 0, "status": "disabled", "error": why, "updated": None, "items": []}
     params = layer.params(query or {})
     parts = layer.parts(params)
     fetch_part = lambda part: part.cache.fetch(part.key, part.ttl, part.load, source=part.source)
@@ -285,7 +304,11 @@ def registry() -> list[dict]:
     with _health_lock:
         health = {k: dict(v) for k, v in _health.items()}
     for layer in LAYERS.values():
-        seen = health.get(layer.id) or {"status": "idle", "error": None, "updated": None, "count": 0}
+        why = layer.unavailable() if layer.unavailable else None
+        if why:
+            seen = {"status": "disabled", "error": why, "updated": None, "count": 0}
+        else:
+            seen = health.get(layer.id) or {"status": "idle", "error": None, "updated": None, "count": 0}
         out.append({
             "id": layer.id, "label": layer.label, **seen, "refresh_s": layer.refresh_s,
             "source": layer.source, "source_url": layer.source_url, "attribution": layer.attribution,
