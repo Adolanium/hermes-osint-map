@@ -1,7 +1,8 @@
 // The map's layers as the page sees them: how each looks (shape + theme colour, so layers never
 // depend on colour alone), how fast it ages, and how a backend item becomes a globe marker.
+import { countryByCode } from '../geo/world.js'
 
-export const SHAPES = { circle: 0, diamond: 1, triangle: 2, square: 3, dart: 4, plus: 5, hexagon: 6, ring: 7, frame: 8 }
+export const SHAPES = { circle: 0, diamond: 1, triangle: 2, square: 3, dart: 4, plus: 5, hexagon: 6, ring: 7, frame: 8, star: 9 }
 
 const H = 3600_000
 
@@ -27,7 +28,9 @@ export const LAYERS = [
   { id: 'cameras', label: 'Traffic cameras', shape: 'frame', cssVar: '--ui-warm', fallbackVar: '--ui-text-secondary', fadeAfter: null, size: [3.5, 3.5],
     hint: 'Official open-data traffic cameras: Transport for London, Singapore LTA, Caltrans (California highways) and the Hong Kong Transport Department. Click one for its latest still' },
   { id: 'chokepoints', label: 'Chokepoints', shape: 'ring', cssVar: '--ui-accent', fallbackVar: '--ui-text-primary', fadeAfter: null, size: [9, 9],
-    hint: 'Strategic straits and canals for shipping' }
+    hint: 'Strategic straits and canals for shipping' },
+  { id: 'feeds', label: 'Operator feeds', shape: 'star', cssVar: '--ui-purple', fallbackVar: '--ui-text-primary', fadeAfter: 48 * H, size: [7, 13],
+    hint: 'Your own RSS/Atom sources and digest files, set in this plugin\'s feeds setting. An item sits at the chokepoint it names, or at the label point of its country — an approximate anchor, not a reported location' }
 ]
 
 /** An earthquake item's magnitude, from its props or its USGS-style title (\"M 5.8 - ...\"). */
@@ -56,9 +59,23 @@ const COUNTRY = /^[A-Z]{2}$/
 export function toItem(raw, layerId) {
   if (!raw || typeof raw !== 'object' || typeof raw.id !== 'string') return null
   const num = (v, lo, hi) => (typeof v === 'number' && Number.isFinite(v) && v >= lo && v <= hi ? v : null)
-  const lat = num(raw.lat, -90, 90)
-  const lon = num(raw.lon, -180, 180)
   const omm = raw.omm && typeof raw.omm === 'object' ? raw.omm : null
+  const country = typeof raw.country === 'string' && COUNTRY.test(raw.country) ? raw.country : null
+  let lat = num(raw.lat, -90, 90)
+  let lon = num(raw.lon, -180, 180)
+  // A country-only item on the feeds layer (no coordinates of its own) is drawn at that country's
+  // label point from the page's own gazetteer, so an operator's feed never needs to carry geometry.
+  // Flagged `approx` so the UI can say the anchor is coarse. Scoped to `feeds` on purpose: every
+  // other layer's items carry their own geometry, and this must not loosen that promise for them.
+  let approx = false
+  if (layerId === 'feeds' && (lat === null || lon === null) && country) {
+    const record = countryByCode(country)
+    if (record && Number.isFinite(record.lat) && Number.isFinite(record.lon)) {
+      lat = record.lat
+      lon = record.lon
+      approx = true
+    }
+  }
   if ((lat === null || lon === null) && !omm) return null
   const text = (v, n) => (typeof v === 'string' && v.trim() ? v.replace(/\s+/g, ' ').trim().slice(0, n) : null)
   const props = Array.isArray(raw.props)
@@ -78,7 +95,8 @@ export function toItem(raw, layerId) {
     subtitle: text(raw.subtitle, 200),
     severity: num(raw.severity, 0, 1) ?? 0.3,
     time: num(raw.time, 0, 8.64e15),
-    country: typeof raw.country === 'string' && COUNTRY.test(raw.country) ? raw.country : null,
+    country,
+    approx,
     url: typeof raw.url === 'string' && /^https?:\/\//.test(raw.url) ? raw.url : null,
     heading: num(raw.heading, 0, 360),
     speedKts: num(raw.speed_kts, 0, 5000),

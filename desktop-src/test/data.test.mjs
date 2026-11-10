@@ -49,7 +49,24 @@ test('toItem rejects items it cannot place, unless they carry orbital elements',
   assert.equal(toItem(raw({ lat: 95 }), 'quakes'), null)
   assert.equal(toItem({ ...raw(), id: 5 }, 'quakes'), null)
   assert.equal(toItem(null, 'quakes'), null)
+  assert.equal(toItem(raw({ lat: null, lon: null, omm: null }), 'quakes'), null)
   assert.ok(toItem(raw({ lat: null, lon: null, omm: { OBJECT_NAME: 'X' } }), 'satellites'))
+})
+
+test('a country-only item is drawn at its country label point on the feeds layer only', () => {
+  const item = toItem(raw({ lat: null, lon: null, country: 'JP' }), 'feeds')
+  assert.ok(item, 'a country is enough to place a feeds item')
+  assert.equal(item.approx, true)
+  assert.equal(item.country, 'JP')
+  assert.ok(Math.abs(item.lat) < 90 && Math.abs(item.lon) <= 180)
+  // An item with its own coordinates is never flagged: those are the source's own numbers.
+  assert.equal(toItem(raw(), 'feeds').approx, false)
+  // An unknown country is not a place.
+  assert.equal(toItem(raw({ lat: null, lon: null, country: 'ZZ' }), 'feeds'), null)
+  // Every other layer's items carry their own geometry; the fallback must not reach them.
+  for (const id of LAYERS.map(l => l.id).filter(id => id !== 'feeds')) {
+    assert.equal(toItem(raw({ lat: null, lon: null, country: 'JP' }), id), null, id)
+  }
 })
 
 test('old events fade toward a floor but never disappear; ongoing layers never fade', () => {
