@@ -30,7 +30,7 @@ export const LAYERS = [
   { id: 'chokepoints', label: 'Chokepoints', shape: 'ring', cssVar: '--ui-accent', fallbackVar: '--ui-text-primary', fadeAfter: null, size: [9, 9],
     hint: 'Strategic straits and canals for shipping' },
   { id: 'feeds', label: 'Operator feeds', shape: 'star', cssVar: '--ui-purple', fallbackVar: '--ui-text-primary', fadeAfter: 48 * H, size: [7, 13],
-    hint: 'Your own RSS/Atom sources and digest files, set in OSINT_MAP_FEEDS. An item sits at the chokepoint it names, or at the label point of its country — an approximate anchor, not a reported location' }
+    hint: 'Your own RSS/Atom sources and digest files, set in this plugin\'s feeds setting. An item sits at the chokepoint it names, or at the label point of its country — an approximate anchor, not a reported location' }
 ]
 
 /** An earthquake item's magnitude, from its props or its USGS-style title (\"M 5.8 - ...\"). */
@@ -63,11 +63,12 @@ export function toItem(raw, layerId) {
   const country = typeof raw.country === 'string' && COUNTRY.test(raw.country) ? raw.country : null
   let lat = num(raw.lat, -90, 90)
   let lon = num(raw.lon, -180, 180)
-  // A country-only item (no coordinates of its own) is drawn at that country's label point from the
-  // page's own gazetteer, so a backend never needs to carry geometry. Flagged `approx` so the UI can
-  // say the anchor is coarse.
+  // A country-only item on the feeds layer (no coordinates of its own) is drawn at that country's
+  // label point from the page's own gazetteer, so an operator's feed never needs to carry geometry.
+  // Flagged `approx` so the UI can say the anchor is coarse. Scoped to `feeds` on purpose: every
+  // other layer's items carry their own geometry, and this must not loosen that promise for them.
   let approx = false
-  if ((lat === null || lon === null) && country) {
+  if (layerId === 'feeds' && (lat === null || lon === null) && country) {
     const record = countryByCode(country)
     if (record && Number.isFinite(record.lat) && Number.isFinite(record.lon)) {
       lat = record.lat
