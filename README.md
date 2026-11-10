@@ -213,7 +213,7 @@ The plugin depends only on `httpx` and `fastapi`, which Hermes already ships.
 
 Earthquakes: USGS (public domain). Natural events: NASA EONET (public domain). Disaster alerts: GDACS. Severe weather: National Weather Service (public domain). Incidents: The GDELT Project. Aircraft: adsb.lol (ODbL). Satellites: CelesTrak. Traffic cameras: Powered by TfL Open Data (contains OS data © Crown copyright and database rights); Singapore traffic images from data.gov.sg under the Singapore Open Data Licence v1.0; Caltrans CCTV, California Department of Transportation; traffic snapshot images from the Transport Department, the Government of the Hong Kong SAR, via DATA.GOV.HK. Space weather: NOAA SWPC (public domain). Country facts: World Bank (CC BY 4.0). Headlines: links and titles from public RSS feeds, plus the GDELT 2.0 article search when a query is given. Borders: Natural Earth (public domain). Cyber attacks: Check Point ThreatCloud live threat map (threatmap.checkpoint.com). Rendering: three.js (MIT); orbits: satellite.js (MIT).
 
-Thanks to everyone who has sent fixes: @tgohblio kept the camera wall and arrow-stepping inside each operator's own feed (#2).
+Thanks to everyone who has sent fixes: @tgohblio kept the camera wall and arrow-stepping inside each operator's own feed (#2), and @hey-dan123 added the operator feeds layer for your own RSS/Atom feeds and digest files (#3).
 
 <br />
 
