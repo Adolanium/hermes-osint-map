@@ -257,8 +257,10 @@ def from_digest(doc: object, spec: dict) -> dict:
 def load(spec: dict) -> dict:
     """One source, fetched now. Raises ``UpstreamError`` with a readable sentence on failure."""
     if spec["kind"] == "rss":
-        body = http.get(spec["url"], source=spec["label"], redirects=3, timeout=15.0,
-                        max_bytes=4 * 1024 * 1024).body
+        # The operator chose this host, but not where it redirects: a public feed must not be able
+        # to send the gateway to a private or internal address.
+        body = http.get(spec["url"], source=spec["label"], redirects=3, guard_redirects=True,
+                        timeout=15.0, max_bytes=4 * 1024 * 1024).body
         return from_rss(body, spec)
     path = Path(spec["file"])
     try:

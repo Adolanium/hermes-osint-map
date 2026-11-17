@@ -217,3 +217,17 @@ def test_the_layer_is_not_disabled_once_a_source_exists():
     configure([{"file": "/does/not/exist.json"}])
     assert feeds.missing() is None
     assert next(r for r in layers.registry() if r["id"] == "feeds")["status"] == "idle"
+
+
+def test_a_feed_redirect_is_checked_for_a_public_target(monkeypatch):
+    seen = {}
+
+    def fake_get(url, **kwargs):
+        seen.update(kwargs, url=url)
+        raise feeds.UpstreamError(502, "stop")
+
+    monkeypatch.setattr(feeds.http, "get", fake_get)
+    with pytest.raises(feeds.UpstreamError):
+        feeds.load({"kind": "rss", "url": "https://example.com/world.xml", "label": "Example"})
+    assert seen["url"] == "https://example.com/world.xml"
+    assert seen["guard_redirects"] is True and seen["redirects"] == 3
