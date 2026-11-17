@@ -11,7 +11,7 @@
   Earthquakes, disaster alerts, natural events, severe weather, aircraft, satellites, news-derived incidents, traffic cameras and shipping chokepoints on a dithered 3D globe inside Hermes Desktop.
   Country dossiers, a passive recon toolkit, briefings Hermes writes from the same public sources, live map cards in chat, and watches that tell you when something new happens in an area.
 
-  <sub>POWERED BY <a href="https://github.com/NousResearch/hermes-agent">HERMES AGENT</a> &nbsp;·&nbsp; COMMUNITY PLUGIN &nbsp;·&nbsp; VERSION 0.4.0</sub>
+  <sub>POWERED BY <a href="https://github.com/NousResearch/hermes-agent">HERMES AGENT</a> &nbsp;·&nbsp; COMMUNITY PLUGIN &nbsp;·&nbsp; VERSION 0.5.0</sub>
 
   <br /><br />
 
@@ -115,7 +115,7 @@ The Watches card on the page lists every watch with its last check and latest al
 - A source that fails keeps serving its last good data, marked stale, and is left alone for a while before the next try.
 - adsb.lol requests are spaced out and retried once after a rate limit.
 - Headline search matches every word in any order.
-- Your own feeds are drawn coarsely on purpose: an item sits at the chokepoint it names, else at its country's label point (marked approximate), and an item that names neither is dropped and counted rather than guessed. The plugin contacts only the hosts you list.
+- Your own feeds are drawn coarsely on purpose: an item sits at the chokepoint it names, else at its country's label point (marked approximate), and an item that names neither is dropped and counted rather than guessed. The plugin contacts only the hosts you list, and refuses a redirect from one of them to a private or internal address.
 - Traffic cameras come only from official open-data feeds. They cluster into one marker per city until you zoom in, and a camera's still is fetched by its id from the operator's own image host, never from an address the page supplies.
 - Recon lookups that connect to a host refuse private, loopback, link-local and other internal addresses, before and after redirects.
 - News incidents are machine-coded from news coverage. The page and the tools say so; they show where reporting is, not verified events. Their titles come from the source article's URL slug when one is readable, and fall back to the place name when it is not.
